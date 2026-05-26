@@ -246,5 +246,69 @@ def templates() -> None:
         )
 
 
+@app.command()
+def repurpose(
+    input: Annotated[Path, typer.Option("--input", "-i", help="Input video file")],
+    output: Annotated[
+        Optional[Path],
+        typer.Option("--output", "-o", help="Output directory for clips"),
+    ] = None,
+    num_clips: Annotated[
+        int,
+        typer.Option("--num-clips", "-n", help="Number of clips to generate"),
+    ] = 5,
+    min_duration: Annotated[
+        float,
+        typer.Option("--min-duration", help="Minimum clip duration in seconds"),
+    ] = 20.0,
+    max_duration: Annotated[
+        float,
+        typer.Option("--max-duration", help="Maximum clip duration in seconds"),
+    ] = 90.0,
+    no_process: Annotated[
+        bool,
+        typer.Option("--no-process", help="Skip pipeline processing (extract only)"),
+    ] = False,
+    template: Annotated[
+        Optional[str],
+        typer.Option("--template", help="Template to apply to each clip"),
+    ] = "tiktok",
+    model: Annotated[
+        str,
+        typer.Option("--model", help="Claude model (sonnet/opus/haiku)"),
+    ] = "sonnet",
+    captions: Annotated[bool, typer.Option("--captions")] = True,
+    burn: Annotated[bool, typer.Option("--burn")] = True,
+    style: Annotated[str, typer.Option("--style")] = "default",
+) -> None:
+    """Analyze a video and repurpose it into short-form clips.
+
+    Uses AI (Claude) to find the most engaging segments, extracts them,
+    and optionally runs each through the full editing pipeline.
+    """
+    from clearcut.repurpose import repurpose as repurpose_fn
+
+    output_dir = output or Path("output_clips")
+
+    kwargs: dict = dict(
+        template=template,
+        generate_captions=captions,
+        burn_captions=burn,
+        style=style,
+    )
+    if template is None:
+        kwargs.pop("template", None)
+
+    repurpose_fn(
+        input_path=input,
+        output_dir=output_dir,
+        num_clips=num_clips,
+        min_duration=min_duration,
+        max_duration=max_duration,
+        process=not no_process,
+        **kwargs,
+    )
+
+
 if __name__ == "__main__":
     app()
