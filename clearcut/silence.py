@@ -8,10 +8,23 @@ import tempfile
 from pathlib import Path
 
 from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 console = Console()
 
 Segment = tuple[float, float]
+
+
+def _has_audio(input_path: Path) -> bool:
+    """Check if a video file has an audio stream."""
+    import subprocess
+    result = subprocess.run(
+        ["ffprobe", "-v", "quiet", "-select_streams", "a",
+         "-show_entries", "stream=codec_type",
+         "-of", "csv=p=0", str(input_path)],
+        capture_output=True, text=True,
+    )
+    return "audio" in result.stdout
 
 
 def detect_audio_segments(input_path: Path, threshold: float = 0.5) -> list[Segment]:
@@ -157,6 +170,12 @@ def remove_silence(
 
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    # Skip silence removal if video has no audio track
+    if not _has_audio(input_path):
+        console.print("[yellow]No audio track found — skipping silence removal[/yellow]")
+        shutil.copy2(input_path, output_path)
+        return output_path
 
     if method == "auto-editor":
         return _remove_silence_auto_editor(input_path, output_path)

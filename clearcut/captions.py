@@ -131,12 +131,12 @@ class CaptionGenerator:
         """Burn ASS subtitles into video using ffmpeg's ass filter."""
         console.print(f"[cyan]Burning captions into {video_path.name}...[/cyan]")
 
-        # Escape special characters in path for ffmpeg filter
-        escaped_ass = str(ass_path).replace("\\", "/").replace(":", "\\:")
+        # Use absolute path with proper ffmpeg escaping via filter argument syntax
+        ass_abs = ass_path.resolve()
         cmd = [
             "ffmpeg", "-y",
             "-i", str(video_path),
-            "-vf", f"ass='{escaped_ass}'",
+            "-vf", f"ass={ass_abs}",
             "-c:v", "libx264",
             "-c:a", "copy",
             "-preset", "fast",

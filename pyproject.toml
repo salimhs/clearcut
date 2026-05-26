@@ -25,7 +25,7 @@ clearcut = "clearcut.cli:app"
 
 [project.optional-dependencies]
 captions = ["whisperx"]
-silence = ["silero-vad", "torch", "torchaudio"]
+silence = ["torch", "torchaudio"]
 scenes = ["scenedetect[opencv]"]
 all = ["clearcut[captions,silence,scenes]"]
 

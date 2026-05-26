@@ -34,7 +34,11 @@ class CompositeScene:
     pip_scale: float = 0.3
 
     def render(self, output_path: Path) -> Path:
-        """Render the composite scene to output_path using MoviePy."""
+        """Render the composite scene to a lossless intermediate.
+
+        Uses ffv1 in MKV for a fast, quality-preserving intermediate that the
+        final encoder pass can compress without generational loss.
+        """
         from moviepy import (
             CompositeVideoClip,
             ImageClip,
@@ -44,33 +48,42 @@ class CompositeScene:
         console.print(f"[cyan]Compositing {self.main_path.name}...[/cyan]")
 
         main_clip = VideoFileClip(str(self.main_path))
-        layers = [main_clip]
+        opened_clips = [main_clip]
 
-        # Picture-in-picture for context footage
-        for ctx_path in self.context_paths:
-            pip_clip = self._make_pip(
-                VideoFileClip(str(ctx_path)),
-                main_clip,
+        try:
+            layers = [main_clip]
+
+            # Picture-in-picture for context footage
+            for ctx_path in self.context_paths:
+                ctx = VideoFileClip(str(ctx_path))
+                opened_clips.append(ctx)
+                pip_clip = self._make_pip(ctx, main_clip)
+                layers.append(pip_clip)
+
+            # Image overlays at specific timestamps
+            for overlay in self.overlays:
+                img_clip = self._make_image_overlay(overlay, main_clip)
+                layers.append(img_clip)
+
+            composite = CompositeVideoClip(layers, size=main_clip.size)
+            composite = composite.with_duration(main_clip.duration)
+
+            # Lossless intermediate — ffv1 in mkv is fast to write
+            # and preserves full quality for the encoder pass
+            output_path = output_path.with_suffix(".mkv")
+            composite.write_videofile(
+                str(output_path),
+                codec="ffv1",
+                audio_codec="pcm_s16le",
+                logger=None,
+                preset="fast",
             )
-            layers.append(pip_clip)
-
-        # Image overlays at specific timestamps
-        for overlay in self.overlays:
-            img_clip = self._make_image_overlay(overlay, main_clip)
-            layers.append(img_clip)
-
-        composite = CompositeVideoClip(layers, size=main_clip.size)
-        composite = composite.with_duration(main_clip.duration)
-
-        composite.write_videofile(
-            str(output_path),
-            codec="libx264",
-            audio_codec="aac",
-            logger=None,
-        )
-
-        main_clip.close()
-        composite.close()
+        finally:
+            for clip in opened_clips:
+                try:
+                    clip.close()
+                except Exception:
+                    pass
 
         console.print(f"[green]Composite written to {output_path}[/green]")
         return output_path

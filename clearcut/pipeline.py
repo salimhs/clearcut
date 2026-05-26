@@ -28,6 +28,7 @@ class Pipeline:
         self.config = config
         self._tmpdir: tempfile.TemporaryDirectory | None = None
         self._workdir: Path | None = None
+        self._skip_encode: bool = False
 
     @property
     def workdir(self) -> Path:
@@ -53,12 +54,17 @@ class Pipeline:
         if self.config.generate_captions:
             current = self._stage_captions(current)
 
-        # Stage 4: Final encode
-        current = self._stage_encode(current)
+        # Stage 4: Final encode (skip if compositor already produced lossless
+        # intermediate and no caption burn needed)
+        if not self._skip_encode:
+            current = self._stage_encode(current)
 
-        # Move to final output
-        if current != self.config.output:
-            shutil.move(str(current), str(self.config.output))
+        # Move to final output — handle .mkv → .mp4 renaming
+        final = self.config.output
+        if current.suffix == ".mkv" and final.suffix == ".mp4":
+            final = final.with_suffix(".mkv")
+        if current != final:
+            shutil.move(str(current), str(final))
 
         console.rule("[bold green]Done[/bold green]")
         console.print(f"Output: [bold]{self.config.output}[/bold]")
@@ -79,7 +85,7 @@ class Pipeline:
         from clearcut.compositor import CompositeScene, ImageOverlay
 
         console.print("\n[bold]Stage 2:[/bold] Compositing")
-        output = self.workdir / "02_composite.mp4"
+        output = self.workdir / "02_composite.mkv"
 
         overlays = []
         # Static images shown for 5 seconds at the start
@@ -103,6 +109,12 @@ class Pipeline:
             overlays=overlays,
         )
         scene.render(output)
+
+        # If no captions burn needed, skip the encode stage too — we'll output
+        # the lossless intermediate as-is for the final step
+        if not self.config.burn_captions:
+            self._skip_encode = True
+
         return output
 
     def _stage_captions(self, input_path: Path) -> Path:
@@ -119,7 +131,9 @@ class Pipeline:
         ass_path.write_text(ass_content)
 
         if self.config.burn_captions:
-            output = self.workdir / "03_captioned.mp4"
+            # Preserve intermediate format — keep .mkv if coming from compositor
+            ext = input_path.suffix
+            output = self.workdir / f"03_captioned{ext}"
             gen.burn(input_path, ass_path, output)
             return output
 
