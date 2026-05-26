@@ -1,6 +1,8 @@
-"""Caption style presets with ASS subtitle parameters."""
+"""Caption style presets, ASS subtitle parameters, and template system."""
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from clearcut.models import CaptionStyle
 
@@ -87,3 +89,99 @@ def to_ass_style_line(style: CaptionStyle, name: str = "Default") -> str:
         f"10,10,{style.margin_v},"  # marginL, marginR, marginV
         f"1"  # encoding
     )
+
+
+# ---------------------------------------------------------------------------
+# Template system — bundles caption style, colour, audio, and format presets
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Template:
+    """A full pipeline preset that bundles multiple settings."""
+
+    name: str
+    caption_style: CaptionStyle
+    lut_path: str | None  # path to .cube LUT
+    transition: str  # default transition type
+    transition_duration: float
+    format: str  # "16:9", "9:16", "1:1"
+    normalize_audio: bool
+    audio_target_lufs: float
+    saturation: float
+    contrast: float
+    brightness: float
+
+
+TEMPLATES: dict[str, Template] = {
+    "clean": Template(
+        name="clean",
+        caption_style=DEFAULT,
+        lut_path=None,
+        transition="fade",
+        transition_duration=0.3,
+        format="16:9",
+        normalize_audio=True,
+        audio_target_lufs=-14.0,
+        saturation=1.0,
+        contrast=1.0,
+        brightness=0.0,
+    ),
+    "tiktok": Template(
+        name="tiktok",
+        caption_style=MODERN,
+        lut_path=None,
+        transition="wiperight",
+        transition_duration=0.4,
+        format="9:16",
+        normalize_audio=True,
+        audio_target_lufs=-13.0,
+        saturation=1.1,
+        contrast=1.05,
+        brightness=0.02,
+    ),
+    "cinematic": Template(
+        name="cinematic",
+        caption_style=MINIMAL,
+        lut_path=None,  # user supplies their cinematic .cube
+        transition="dissolve",
+        transition_duration=0.5,
+        format="16:9",
+        normalize_audio=True,
+        audio_target_lufs=-16.0,
+        saturation=0.85,
+        contrast=1.15,
+        brightness=-0.02,
+    ),
+    "bold": Template(
+        name="bold",
+        caption_style=BOLD,
+        lut_path=None,
+        transition="slideleft",
+        transition_duration=0.4,
+        format="16:9",
+        normalize_audio=True,
+        audio_target_lufs=-14.0,
+        saturation=1.2,
+        contrast=1.1,
+        brightness=0.02,
+    ),
+}
+
+
+def get_template(name: str) -> Template:
+    """Get a template preset by name.
+
+    Raises:
+        ValueError: If *name* is not a known template.
+    """
+    if name not in TEMPLATES:
+        raise ValueError(
+            f"Unknown template '{name}'. Choose from: {', '.join(TEMPLATES)}"
+        )
+    return TEMPLATES[name]
+
+
+def list_templates() -> list[str]:
+    """Return the names of all available templates."""
+    return list(TEMPLATES.keys())

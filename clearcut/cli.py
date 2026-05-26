@@ -82,6 +82,58 @@ def process(
         str,
         typer.Option("--hardware", help="Hardware encoder (auto/nvenc/amf/qsv/software)"),
     ] = "auto",
+    # --- Audio ---
+    normalize: Annotated[
+        bool,
+        typer.Option("--normalize/--no-normalize", help="Normalize audio loudness"),
+    ] = True,
+    audio_target: Annotated[
+        float,
+        typer.Option("--audio-target", help="Target loudness in LUFS"),
+    ] = -14.0,
+    duck_music: Annotated[
+        Optional[Path],
+        typer.Option("--duck-music", help="Background music file for ducking"),
+    ] = None,
+    # --- Colour grading ---
+    lut: Annotated[
+        Optional[Path],
+        typer.Option("--lut", help="Path to .cube LUT file"),
+    ] = None,
+    brightness: Annotated[
+        float,
+        typer.Option("--brightness", help="Brightness adjustment (-1.0 to 1.0)"),
+    ] = 0.0,
+    contrast: Annotated[
+        float,
+        typer.Option("--contrast", help="Contrast adjustment (0.0 to 2.0)"),
+    ] = 1.0,
+    saturation: Annotated[
+        float,
+        typer.Option("--saturation", help="Saturation adjustment (0.0 to 2.0)"),
+    ] = 1.0,
+    # --- Format ---
+    format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: 16:9, 9:16, 1:1"),
+    ] = "16:9",
+    # --- Transitions ---
+    transition: Annotated[
+        str,
+        typer.Option(
+            "--transition",
+            help="Transition type (fade/wipeleft/wiperight/slideleft/slideright/dissolve/radial)",
+        ),
+    ] = "fade",
+    transition_duration: Annotated[
+        float,
+        typer.Option("--transition-duration", help="Transition duration in seconds"),
+    ] = 0.3,
+    # --- Template ---
+    template: Annotated[
+        Optional[str],
+        typer.Option("--template", help="Template preset (clean/tiktok/cinematic/bold)"),
+    ] = None,
 ) -> None:
     """Process raw footage into a publish-ready video."""
     from clearcut.models import AssetPosition, PipelineConfig
@@ -105,6 +157,17 @@ def process(
         burn_captions=burn,
         encoder_preset=preset,
         hardware=hardware,
+        normalize_audio=normalize,
+        audio_target_lufs=audio_target,
+        duck_music=duck_music,
+        lut=lut,
+        brightness=brightness,
+        contrast=contrast,
+        saturation=saturation,
+        format=format,
+        transition=transition,
+        transition_duration=transition_duration,
+        template=template,
     )
 
     pipeline = Pipeline(config)
@@ -167,6 +230,20 @@ def trim(
     out_path = output or input.with_stem(input.stem + "_trimmed")
     remove_silence(input, out_path, method=method, threshold=threshold)
     console.print(f"[green]Trimmed video saved to {out_path}[/green]")
+
+
+@app.command()
+def templates() -> None:
+    """List available pipeline templates."""
+    from clearcut.styles import TEMPLATES
+
+    for name, tpl in TEMPLATES.items():
+        console.print(
+            f"  [bold]{name}[/bold] — "
+            f"format={tpl.format}, transition={tpl.transition}, "
+            f"lufs={tpl.audio_target_lufs}, "
+            f"sat={tpl.saturation}, con={tpl.contrast}, bri={tpl.brightness:+.2f}"
+        )
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class AssetPosition(BaseModel):
@@ -61,9 +61,67 @@ class PipelineConfig(BaseModel):
     encoder_preset: str = "fast"
     hardware: str = "auto"
 
+    # Audio processing
+    normalize_audio: bool = True
+    audio_target_lufs: float = -14.0
+    duck_music: Path | None = None  # path to background music for ducking
+
+    # Colour grading
+    lut: Path | None = None  # path to .cube LUT file
+    brightness: float = 0.0
+    contrast: float = 1.0
+    saturation: float = 1.0
+
+    # Format / aspect ratio
+    format: str = "16:9"  # "16:9", "9:16", "1:1"
+
+    # Transitions
+    transition: str = "fade"  # transition between segments
+    transition_duration: float = 0.3
+
+    # Template — overrides individual flags when set
+    template: str | None = None
+
     @field_validator("main")
     @classmethod
     def main_must_exist(cls, v: Path) -> Path:
         if not v.exists():
             raise ValueError(f"Main video file not found: {v}")
         return v
+
+    @model_validator(mode="after")
+    def apply_template(self) -> PipelineConfig:
+        """If a template is set, override individual flags from template config."""
+        if self.template is None:
+            return self
+
+        from clearcut.styles import get_template
+
+        tpl = get_template(self.template)
+
+        # Override style from template's caption style name
+        for name, preset_style in _caption_style_map().items():
+            if preset_style == tpl.caption_style:
+                self.style = name
+                break
+
+        self.normalize_audio = tpl.normalize_audio
+        self.audio_target_lufs = tpl.audio_target_lufs
+        self.transition = tpl.transition
+        self.transition_duration = tpl.transition_duration
+        self.format = tpl.format
+        self.saturation = tpl.saturation
+        self.contrast = tpl.contrast
+        self.brightness = tpl.brightness
+
+        if tpl.lut_path is not None:
+            self.lut = Path(tpl.lut_path)
+
+        return self
+
+
+def _caption_style_map() -> dict:
+    """Lazy import to avoid circular dependency with styles module."""
+    from clearcut.styles import PRESETS
+
+    return PRESETS
