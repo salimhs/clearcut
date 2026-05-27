@@ -9,6 +9,8 @@ from pathlib import Path
 
 from rich.console import Console
 
+from clearcut.exceptions import ConfigError, EncodingError, FileError
+
 console = Console()
 
 SUPPORTED_TRANSITIONS: list[str] = [
@@ -25,7 +27,7 @@ SUPPORTED_TRANSITIONS: list[str] = [
 def _require_ffmpeg() -> None:
     """Raise if ffmpeg is not installed."""
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found in PATH")
+        raise EncodingError("ffmpeg not found in PATH")
 
 
 def _get_duration(path: Path) -> float:
@@ -43,7 +45,7 @@ def _get_duration(path: Path) -> float:
         data = json.loads(result.stdout)
         return float(data["format"]["duration"])
     except (json.JSONDecodeError, KeyError, ValueError):
-        raise RuntimeError(f"Could not determine duration of {path}")
+        raise EncodingError(f"Could not determine duration of {path}")
 
 
 def apply_transitions(
@@ -78,14 +80,14 @@ def apply_transitions(
             console.print("[dim]Single segment — no transitions needed[/dim]")
             shutil.copy2(segment_paths[0], output_path)
             return output_path
-        raise ValueError("Need at least one segment")
+        raise ConfigError("Need at least one segment")
 
     for p in segment_paths:
         if not p.exists():
-            raise FileNotFoundError(f"Segment file not found: {p}")
+            raise FileError(f"Segment file not found: {p}")
 
     if transition not in SUPPORTED_TRANSITIONS:
-        raise ValueError(
+        raise ConfigError(
             f"Unsupported transition '{transition}'. "
             f"Choose from: {', '.join(SUPPORTED_TRANSITIONS)}"
         )
@@ -103,7 +105,7 @@ def apply_transitions(
     # Validate that segments are long enough for the transition
     for i, dur in enumerate(durations):
         if dur <= duration:
-            raise ValueError(
+            raise ConfigError(
                 f"Segment {i} ({segment_paths[i].name}) is {dur:.2f}s — "
                 f"shorter than the transition duration ({duration}s)"
             )

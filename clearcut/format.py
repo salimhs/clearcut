@@ -9,15 +9,17 @@ from pathlib import Path
 
 from rich.console import Console
 
+from clearcut.exceptions import EncodingError, FileError
+
 console = Console()
 
 
 def _require_ffmpeg() -> None:
     """Raise if ffmpeg/ffprobe are not installed."""
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found in PATH")
+        raise EncodingError("ffmpeg not found in PATH")
     if not shutil.which("ffprobe"):
-        raise RuntimeError("ffprobe not found in PATH")
+        raise EncodingError("ffprobe not found in PATH")
 
 
 def detect_aspect(input_path: Path) -> dict:
@@ -32,7 +34,7 @@ def detect_aspect(input_path: Path) -> dict:
     """
     input_path = Path(input_path)
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
 
     _require_ffmpeg()
 
@@ -51,11 +53,11 @@ def detect_aspect(input_path: Path) -> dict:
     try:
         data = json.loads(result.stdout)
     except json.JSONDecodeError:
-        raise RuntimeError(f"Could not probe video dimensions: {input_path}")
+        raise EncodingError(f"Could not probe video dimensions: {input_path}")
 
     streams = data.get("streams", [])
     if not streams:
-        raise RuntimeError(f"No video stream found in {input_path}")
+        raise EncodingError(f"No video stream found in {input_path}")
 
     s = streams[0]
     width = int(s.get("width", 0))
@@ -86,7 +88,7 @@ def _reformat(
     output_path = Path(output_path)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
 
     _require_ffmpeg()
 

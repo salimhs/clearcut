@@ -1,8 +1,9 @@
-"""Tests for clearcut.audio — _safe_float and _has_audio_stream."""
+"""Tests for clearcut.audio — _safe_float and has_audio."""
 
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 
 class TestSafeFloat:
@@ -48,25 +49,23 @@ class TestSafeFloat:
         assert self._safe_float(0, -24) == 0.0
 
 
-class TestHasAudioStream:
-    """Test _has_audio_stream with mocked ffprobe."""
+class TestHasAudio:
+    """Test has_audio with mocked ffprobe."""
 
     def test_has_audio(self, mocker) -> None:
-        from clearcut.audio import _has_audio_stream
-        from pathlib import Path
+        from clearcut.utils import has_audio
 
         mock_result = mocker.MagicMock()
         mock_result.stdout = "audio\n"
-        mocker.patch("clearcut.audio.subprocess.run", return_value=mock_result)
+        mocker.patch("clearcut.utils.subprocess.run", return_value=mock_result)
 
-        assert _has_audio_stream(Path("test.mp4")) is True
+        assert has_audio(Path("test.mp4")) is True
 
     def test_no_audio(self, mocker) -> None:
-        from clearcut.audio import _has_audio_stream
-        from pathlib import Path
+        from clearcut.utils import has_audio
 
         mock_result = mocker.MagicMock()
         mock_result.stdout = ""
-        mocker.patch("clearcut.audio.subprocess.run", return_value=mock_result)
+        mocker.patch("clearcut.utils.subprocess.run", return_value=mock_result)
 
-        assert _has_audio_stream(Path("test.mp4")) is False
+        assert has_audio(Path("test.mp4")) is False

@@ -8,13 +8,15 @@ from pathlib import Path
 
 from rich.console import Console
 
+from clearcut.exceptions import EncodingError, FileError
+
 console = Console()
 
 
 def _require_ffmpeg() -> None:
     """Raise if ffmpeg is not installed."""
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found in PATH")
+        raise EncodingError("ffmpeg not found in PATH")
 
 
 def _validate_cube_file(lut_path: Path) -> bool:
@@ -66,9 +68,9 @@ def apply_lut(
     lut_path = Path(lut_path)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
     if not lut_path.exists():
-        raise FileNotFoundError(f"LUT file not found: {lut_path}")
+        raise FileError(f"LUT file not found: {lut_path}")
 
     _require_ffmpeg()
 
@@ -140,7 +142,7 @@ def basic_correct(
     output_path = Path(output_path)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
 
     _require_ffmpeg()
 

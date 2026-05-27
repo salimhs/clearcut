@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from clearcut.transitions import SUPPORTED_TRANSITIONS, apply_transitions
+from clearcut.exceptions import ConfigError
 
 
 class TestOffsetCalculation:
@@ -65,7 +66,7 @@ class TestDurationValidation:
         assert "radial" in SUPPORTED_TRANSITIONS
 
     def test_empty_segments_raises(self) -> None:
-        with pytest.raises(ValueError, match="at least one segment"):
+        with pytest.raises(ConfigError, match="at least one segment"):
             apply_transitions([], Path("out.mp4"))
 
     def test_unsupported_transition_raises(self, tmp_path: Path) -> None:
@@ -73,5 +74,5 @@ class TestDurationValidation:
         seg2 = tmp_path / "b.mp4"
         seg1.write_bytes(b"\x00")
         seg2.write_bytes(b"\x00")
-        with pytest.raises(ValueError, match="Unsupported transition"):
+        with pytest.raises(ConfigError, match="Unsupported transition"):
             apply_transitions([seg1, seg2], tmp_path / "out.mp4", transition="spin")

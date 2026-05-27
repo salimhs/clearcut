@@ -9,21 +9,12 @@ from pathlib import Path
 
 from rich.console import Console
 
+from clearcut.exceptions import AudioError, FileError
+from clearcut.utils import has_audio
+
 console = Console()
 
 Segment = tuple[float, float]
-
-
-def _has_audio(input_path: Path) -> bool:
-    """Check if a video file has an audio stream."""
-    import subprocess
-    result = subprocess.run(
-        ["ffprobe", "-v", "quiet", "-select_streams", "a",
-         "-show_entries", "stream=codec_type",
-         "-of", "csv=p=0", str(input_path)],
-        capture_output=True, text=True,
-    )
-    return "audio" in result.stdout
 
 
 def detect_audio_segments(input_path: Path, threshold: float = 0.5) -> list[Segment]:
@@ -35,7 +26,7 @@ def detect_audio_segments(input_path: Path, threshold: float = 0.5) -> list[Segm
         import torch
         import torchaudio  # noqa: F401
     except ImportError:
-        raise RuntimeError(
+        raise AudioError(
             "Silero-VAD requires torch and torchaudio. "
             "Install with: pip install clearcut[silence]"
         )
@@ -136,7 +127,7 @@ def cut_silence(input_path: Path, segments: list[Segment], output_path: Path) ->
 def _remove_silence_auto_editor(input_path: Path, output_path: Path) -> Path:
     """Fallback: use auto-editor CLI if installed."""
     if not shutil.which("auto-editor"):
-        raise RuntimeError("auto-editor not found. Install with: pip install auto-editor")
+        raise AudioError("auto-editor not found. Install with: pip install auto-editor")
     cmd = [
         "auto-editor",
         str(input_path),
@@ -168,10 +159,10 @@ def remove_silence(
     output_path = Path(output_path)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
 
     # Skip silence removal if video has no audio track
-    if not _has_audio(input_path):
+    if not has_audio(input_path):
         console.print("[yellow]No audio track found — skipping silence removal[/yellow]")
         shutil.copy2(input_path, output_path)
         return output_path
@@ -183,7 +174,7 @@ def remove_silence(
 
     try:
         segments = detect_audio_segments(input_path, threshold=threshold)
-    except RuntimeError:
+    except AudioError:
         console.print("[yellow]Silero-VAD unavailable, falling back to auto-editor[/yellow]")
         return _remove_silence_auto_editor(input_path, output_path)
 

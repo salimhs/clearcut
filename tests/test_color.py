@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from clearcut.color import _validate_cube_file, basic_correct, apply_lut
+from clearcut.exceptions import FileError
 
 
 class TestValidateCubeFile:
@@ -40,7 +41,7 @@ class TestApplyLut:
     """Test apply_lut parameter clamping."""
 
     def test_file_not_found(self, tmp_path: Path) -> None:
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileError, match="Input file not found"):
             apply_lut(
                 tmp_path / "missing.mp4",
                 tmp_path / "out.mp4",
@@ -50,7 +51,7 @@ class TestApplyLut:
     def test_lut_not_found(self, tmp_path: Path) -> None:
         video = tmp_path / "test.mp4"
         video.write_bytes(b"\x00")
-        with pytest.raises(FileNotFoundError, match="LUT file not found"):
+        with pytest.raises(FileError, match="LUT file not found"):
             apply_lut(video, tmp_path / "out.mp4", tmp_path / "missing.cube")
 
 
@@ -58,7 +59,7 @@ class TestBasicCorrect:
     """Test basic_correct parameter clamping."""
 
     def test_file_not_found(self, tmp_path: Path) -> None:
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileError, match="Input file not found"):
             basic_correct(tmp_path / "missing.mp4", tmp_path / "out.mp4")
 
     def test_default_values_copy(self, tmp_path: Path, mocker) -> None:

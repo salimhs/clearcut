@@ -11,30 +11,18 @@ from typing import Any
 
 from rich.console import Console
 
+from clearcut.exceptions import AudioError, FileError
+from clearcut.utils import has_audio
+
 console = Console()
 
 
 def _require_ffmpeg() -> None:
     """Raise if ffmpeg/ffprobe are not installed."""
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found in PATH")
+        raise AudioError("ffmpeg not found in PATH")
     if not shutil.which("ffprobe"):
-        raise RuntimeError("ffprobe not found in PATH")
-
-
-def _has_audio_stream(input_path: Path) -> bool:
-    """Check whether a file contains at least one audio stream."""
-    result = subprocess.run(
-        [
-            "ffprobe", "-v", "quiet",
-            "-select_streams", "a",
-            "-show_entries", "stream=codec_type",
-            "-of", "csv=p=0",
-            str(input_path),
-        ],
-        capture_output=True, text=True,
-    )
-    return "audio" in result.stdout
+        raise AudioError("ffprobe not found in PATH")
 
 
 def detect_audio(input_path: Path) -> dict:
@@ -50,7 +38,7 @@ def detect_audio(input_path: Path) -> dict:
     """
     input_path = Path(input_path)
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
 
     _require_ffmpeg()
 
@@ -111,11 +99,11 @@ def normalize_audio(
     output_path = Path(output_path)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
 
     _require_ffmpeg()
 
-    if not _has_audio_stream(input_path):
+    if not has_audio(input_path):
         console.print("[yellow]No audio stream — skipping normalization[/yellow]")
         shutil.copy2(input_path, output_path)
         return output_path

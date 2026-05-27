@@ -14,6 +14,8 @@ from pathlib import Path
 
 from rich.console import Console
 
+from clearcut.exceptions import EncodingError, FileError
+
 console = Console()
 
 
@@ -40,9 +42,9 @@ def apply_punch_zoom(
     output_path = Path(output_path)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found in PATH")
+        raise EncodingError("ffmpeg not found in PATH")
 
     # Get input dimensions
     probe = subprocess.run(
@@ -60,7 +62,7 @@ def apply_punch_zoom(
         w = int(info["streams"][0]["width"])
         h = int(info["streams"][0]["height"])
     except (json.JSONDecodeError, KeyError, IndexError):
-        raise RuntimeError(f"Could not determine video dimensions: {input_path}")
+        raise EncodingError(f"Could not determine video dimensions: {input_path}")
 
     console.print(
         f"[cyan]Applying punch zoom ({zoom_in}x) on {input_path.name}[/cyan]"
@@ -114,9 +116,9 @@ def add_hook_zoom(
     output_path = Path(output_path)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+        raise FileError(f"Input file not found: {input_path}")
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found in PATH")
+        raise EncodingError("ffmpeg not found in PATH")
 
     console.print(
         f"[cyan]Adding hook zoom ({zoom_amount}x for {hook_duration}s) "
@@ -136,7 +138,7 @@ def add_hook_zoom(
     try:
         total_dur = float(json.loads(probe.stdout)["format"]["duration"])
     except (json.JSONDecodeError, KeyError):
-        raise RuntimeError(f"Could not determine duration: {input_path}")
+        raise EncodingError(f"Could not determine duration: {input_path}")
 
     if total_dur <= hook_duration:
         shutil.copy2(input_path, output_path)
@@ -158,7 +160,7 @@ def add_hook_zoom(
         w = int(info["streams"][0]["width"])
         h = int(info["streams"][0]["height"])
     except (json.JSONDecodeError, KeyError, IndexError):
-        raise RuntimeError(f"Could not determine video dimensions: {input_path}")
+        raise EncodingError(f"Could not determine video dimensions: {input_path}")
 
     with tempfile.TemporaryDirectory(prefix="clearcut_zoom_") as tmpdir:
         tmp = Path(tmpdir)
