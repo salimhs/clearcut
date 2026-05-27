@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import subprocess
 import tempfile
@@ -9,8 +10,11 @@ from pathlib import Path
 
 from rich.console import Console
 
+
 from clearcut.exceptions import AudioError, FileError
 from clearcut.utils import has_audio
+
+log = logging.getLogger(__name__)
 
 console = Console()
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,8 @@ from rich.console import Console
 
 from clearcut.models import CaptionStyle
 from clearcut.styles import get_style, to_ass_style_line
+
+log = logging.getLogger(__name__)
 
 console = Console()
 
@@ -30,7 +33,9 @@ class CaptionGenerator:
         self.style = style or get_style(style_name)
 
     def transcribe(self, audio_path: Path) -> list[Word]:
-        """Transcribe audio to word-level timestamps using WhisperX.
+        """Transcribe audio to word-level timestamps.
+
+        Tries faster-whisper (CPU-friendly) first, then falls back to WhisperX.
 
         Args:
             audio_path: Path to audio or video file.
@@ -38,13 +43,29 @@ class CaptionGenerator:
         Returns:
             List of Word objects with text, start, and end times.
         """
+        # Try faster-whisper first (works on CPU without torch)
+        try:
+            import faster_whisper
+
+            console.print(f"[cyan]Transcribing {audio_path.name} with faster-whisper (CPU)...[/cyan]")
+            model = faster_whisper.WhisperModel("large-v3", device="cpu", compute_type="int8")
+            segments, info = model.transcribe(str(audio_path), word_timestamps=True)
+            words: list[Word] = []
+            for seg in segments:
+                for w in (seg.words or []):
+                    words.append(Word(text=w.word, start=w.start, end=w.end))
+            console.print(f"[green]Transcribed {len(words)} words[/green]")
+            return words
+        except ImportError:
+            pass  # fall through to existing whisperx path
+
         try:
             import whisperx
             import torch
         except ImportError:
             raise RuntimeError(
-                "WhisperX requires additional dependencies. "
-                "Install with: pip install clearcut[captions]"
+                "No transcription backend available. "
+                "Install with: pip install faster-whisper  OR  pip install clearcut[captions]"
             )
 
         device = "cuda" if torch.cuda.is_available() else "cpu"

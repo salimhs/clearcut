@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Literal
 
+
 from pydantic import BaseModel, field_validator, model_validator
 
+log = logging.getLogger(__name__)
 
 class AssetPosition(BaseModel):
     """An image/screenshot to insert at a specific timestamp."""

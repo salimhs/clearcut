@@ -8,12 +8,14 @@ ready for the ClearCut pipeline.
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from rich.console import Console
+log = logging.getLogger(__name__)
 
 console = Console()
 

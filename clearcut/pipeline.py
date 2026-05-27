@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import logging
+import signal
 import shutil
 import tempfile
 from pathlib import Path
+from types import FrameType
 
 from rich.console import Console
 
 from clearcut.models import PipelineConfig
 from clearcut.styles import get_style
+log = logging.getLogger(__name__)
 
 console = Console()
 
@@ -35,6 +39,9 @@ class Pipeline:
         self._workdir: Path | None = None
         self._skip_encode: bool = False
         self._intermediate_segments: list[Path] = []
+        self._interrupted: bool = False
+        self._original_sigint: signal.Handlers | None = None
+        self._original_sigterm: signal.Handlers | None = None
 
     @property
     def workdir(self) -> Path:
@@ -43,48 +50,81 @@ class Pipeline:
             self._workdir = Path(self._tmpdir.name)
         return self._workdir
 
+    def _handle_signal(self, signum: int, frame: FrameType | None) -> None:
+        """Handle SIGINT/SIGTERM for graceful shutdown."""
+        self._interrupted = True
+        console.print("\n[bold yellow]Interrupted — cleaning up...[/bold yellow]")
+
+    def _install_signal_handlers(self) -> None:
+        self._original_sigint = signal.getsignal(signal.SIGINT)
+        self._original_sigterm = signal.getsignal(signal.SIGTERM)
+        signal.signal(signal.SIGINT, self._handle_signal)
+        signal.signal(signal.SIGTERM, self._handle_signal)
+
+    def _restore_signal_handlers(self) -> None:
+        if self._original_sigint is not None:
+            signal.signal(signal.SIGINT, self._original_sigint)
+        if self._original_sigterm is not None:
+            signal.signal(signal.SIGTERM, self._original_sigterm)
+
+    def _check_interrupted(self) -> bool:
+        if self._interrupted:
+            console.print("[yellow]Pipeline interrupted — skipping remaining stages[/yellow]")
+            return True
+        return False
+
     def run(self) -> Path:
         """Execute the full pipeline and return the output path."""
+        self._install_signal_handlers()
+        try:
+            return self._run_stages()
+        finally:
+            self._restore_signal_handlers()
+
+    def _run_stages(self) -> Path:
+        """Execute pipeline stages, checking for interruption between each."""
         console.rule("[bold cyan]clearcut pipeline[/bold cyan]")
         current = self.config.main
 
         # Stage 1: Silence removal
-        if self.config.remove_silence:
+        if self.config.remove_silence and not self._check_interrupted():
             current = self._stage_silence(current)
 
         # Stage 2: Audio normalization
-        if self.config.normalize_audio:
+        if self.config.normalize_audio and not self._check_interrupted():
             current = self._stage_normalize_audio(current)
 
         # Stage 2b: Music ducking (optional)
-        if self.config.duck_music:
+        if self.config.duck_music and not self._check_interrupted():
             current = self._stage_duck_music(current)
 
         # Stage 3: Compositing
-        if self.config.context or self.config.images or self.config.assets:
+        if (self.config.context or self.config.images or self.config.assets) \
+                and not self._check_interrupted():
             current = self._stage_composite(current)
 
         # Stage 4: Colour grading — LUT and/or basic correction
-        current = self._stage_colour(current)
+        if not self._check_interrupted():
+            current = self._stage_colour(current)
 
         # Stage 5: Format conversion (apply BEFORE captions so ASS coords are right)
-        if self.config.format != "16:9":
+        if self.config.format != "16:9" and not self._check_interrupted():
             current = self._stage_format(current)
 
         # Stage 6: Captions (burn after correct dimensions are set)
-        if self.config.generate_captions:
+        if self.config.generate_captions and not self._check_interrupted():
             current = self._stage_captions(current)
 
         # Stage 7: Effects (punch zoom, hook zoom)
-        if self.config.punch_zoom:
+        if self.config.punch_zoom and not self._check_interrupted():
             current = self._stage_effects(current)
 
         # Stage 8: Transitions between segments
-        if len(self._intermediate_segments) > 1:
+        if len(self._intermediate_segments) > 1 and not self._check_interrupted():
             current = self._stage_transitions(current)
 
         # Stage 9: Final encode
-        if not self._skip_encode:
+        if not self._skip_encode and not self._check_interrupted():
             current = self._stage_encode(current)
 
         # Move to final output
@@ -94,7 +134,10 @@ class Pipeline:
         if current != final:
             shutil.move(str(current), str(final))
 
-        console.rule("[bold green]Done[/bold green]")
+        if self._interrupted:
+            console.rule("[bold yellow]Interrupted[/bold yellow]")
+        else:
+            console.rule("[bold green]Done[/bold green]")
         console.print(f"Output: [bold]{self.config.output}[/bold]")
         return self.config.output
 

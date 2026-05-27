@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
 
+
 from clearcut import __version__
+log = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="clearcut",
@@ -31,8 +34,15 @@ def main(
         bool,
         typer.Option("--version", "-v", callback=version_callback, is_eager=True),
     ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", help="Enable verbose/debug logging"),
+    ] = False,
 ) -> None:
     """clearcut — automated video editing pipeline."""
+    from clearcut.logging import setup_logging
+
+    setup_logging(verbose=verbose)
 
 
 @app.command()
@@ -143,45 +153,67 @@ def process(
         Optional[str],
         typer.Option("--template", help="Template preset (clean/tiktok/cinematic/bold)"),
     ] = None,
+    # --- Config file ---
+    config: Annotated[
+        Optional[Path],
+        typer.Option("--config", help="YAML config file (CLI args override config values)"),
+    ] = None,
 ) -> None:
     """Process raw footage into a publish-ready video."""
     from clearcut.models import AssetPosition, PipelineConfig
     from clearcut.pipeline import Pipeline
 
-    parsed_assets = []
-    if assets:
-        for raw in assets:
-            parsed_assets.append(AssetPosition.parse(raw))
+    # Load YAML config if provided, then let CLI args override
+    file_defaults: dict = {}
+    if config is not None:
+        import yaml
 
-    config = PipelineConfig(
-        main=main,
-        context=context or [],
-        images=images or [],
+        file_defaults = yaml.safe_load(config.read_text()) or {}
+
+    def _pick(cli_val: object, key: str, cli_default: object) -> object:
+        """Return CLI value if explicitly set, else fall back to config file."""
+        if cli_val != cli_default:
+            return cli_val
+        return file_defaults.get(key, cli_default)
+
+    parsed_assets = []
+    raw_assets = _pick(assets, "assets", None)
+    if raw_assets:
+        for raw in raw_assets:
+            if isinstance(raw, str):
+                parsed_assets.append(AssetPosition.parse(raw))
+            elif isinstance(raw, dict):
+                parsed_assets.append(AssetPosition(path=Path(raw["path"]), seconds=raw["seconds"]))
+
+    config_obj = PipelineConfig(
+        main=Path(_pick(main, "main", main)),  # type: ignore[arg-type]
+        context=[Path(p) for p in _pick(context, "context", None) or []],
+        images=[Path(p) for p in _pick(images, "images", None) or []],
         assets=parsed_assets,
-        style=style,  # type: ignore[arg-type]
-        output=output,
-        remove_silence=not no_silence,
-        silence_method=silence_method,  # type: ignore[arg-type]
-        generate_captions=captions,
-        burn_captions=burn,
-        encoder_preset=preset,
-        hardware=hardware,
-        normalize_audio=normalize,
-        audio_target_lufs=audio_target,
-        duck_music=duck_music,
-        lut=lut,
-        brightness=brightness,
-        contrast=contrast,
-        saturation=saturation,
-        format=format,
-        transition=transition,
-        transition_duration=transition_duration,
-        punch_zoom=punch_zoom,
-        hook_zoom=hook_zoom,
-        template=template,
+        style=_pick(style, "style", "default"),  # type: ignore[arg-type]
+        output=Path(_pick(output, "output", Path("output.mp4"))),
+        remove_silence=not _pick(no_silence, "no_silence", False),
+        silence_method=_pick(silence_method, "silence_method", "vad"),  # type: ignore[arg-type]
+        generate_captions=_pick(captions, "captions", False),  # type: ignore[arg-type]
+        burn_captions=_pick(burn, "burn", False),  # type: ignore[arg-type]
+        encoder_preset=_pick(preset, "preset", "fast"),  # type: ignore[arg-type]
+        hardware=_pick(hardware, "hardware", "auto"),  # type: ignore[arg-type]
+        normalize_audio=_pick(normalize, "normalize", True),  # type: ignore[arg-type]
+        audio_target_lufs=_pick(audio_target, "audio_target", -14.0),  # type: ignore[arg-type]
+        duck_music=_pick(duck_music, "duck_music", None),  # type: ignore[arg-type]
+        lut=_pick(lut, "lut", None),  # type: ignore[arg-type]
+        brightness=_pick(brightness, "brightness", 0.0),  # type: ignore[arg-type]
+        contrast=_pick(contrast, "contrast", 1.0),  # type: ignore[arg-type]
+        saturation=_pick(saturation, "saturation", 1.0),  # type: ignore[arg-type]
+        format=_pick(format, "format", "16:9"),  # type: ignore[arg-type]
+        transition=_pick(transition, "transition", "fade"),  # type: ignore[arg-type]
+        transition_duration=_pick(transition_duration, "transition_duration", 0.3),  # type: ignore[arg-type]
+        punch_zoom=_pick(punch_zoom, "punch_zoom", 0.0),  # type: ignore[arg-type]
+        hook_zoom=_pick(hook_zoom, "hook_zoom", False),  # type: ignore[arg-type]
+        template=_pick(template, "template", None),  # type: ignore[arg-type]
     )
 
-    pipeline = Pipeline(config)
+    pipeline = Pipeline(config_obj)
     try:
         pipeline.run()
     finally:

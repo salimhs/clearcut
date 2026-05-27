@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import subprocess
 from pathlib import Path
 
 from rich.console import Console
 
+
 from clearcut.exceptions import EncodingError, FileError
+log = logging.getLogger(__name__)
 
 console = Console()
 

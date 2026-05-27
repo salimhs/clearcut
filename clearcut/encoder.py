@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from rich.console import Console
+
+log = logging.getLogger(__name__)
 
 console = Console()
 

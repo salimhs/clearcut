@@ -7,6 +7,7 @@ Adds cinematic zoom effects at the start of clips for streamer-style
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import subprocess
 import tempfile
@@ -15,6 +16,8 @@ from pathlib import Path
 from rich.console import Console
 
 from clearcut.exceptions import EncodingError, FileError
+
+log = logging.getLogger(__name__)
 
 console = Console()
 

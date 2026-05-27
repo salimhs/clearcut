@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
+
 from clearcut.models import CaptionStyle
+log = logging.getLogger(__name__)
 
 DEFAULT = CaptionStyle(
     font="Arial",

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 
 def has_audio(input_path: Path) -> bool:

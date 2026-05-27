@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
 
+
 from rich.console import Console
 
 from clearcut.exceptions import AudioError, FileError
 from clearcut.utils import has_audio
+log = logging.getLogger(__name__)
 
 console = Console()
 
@@ -224,7 +227,7 @@ def add_ducking(
 
     _require_ffmpeg()
 
-    if not _has_audio_stream(video_path):
+    if not has_audio(video_path):
         console.print("[yellow]No audio in video — skipping ducking[/yellow]")
         shutil.copy2(video_path, output_path)
         return output_path
