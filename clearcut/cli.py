@@ -44,6 +44,11 @@ def main(
 
     setup_logging(verbose=verbose)
 
+    # Print GPU banner on startup
+    from clearcut.gpu import print_gpu_banner
+
+    print_gpu_banner()
+
 
 @app.command()
 def process(
@@ -351,6 +356,76 @@ def repurpose(
         process=not no_process,
         **kwargs,
     )
+
+
+@app.command()
+def remote(
+    input: Annotated[Path, typer.Option("--input", "-i", help="Input video file to process on remote GPU")],
+    output: Annotated[Path, typer.Option("--output", "-o", help="Output file path")],
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Remote GPU machine Tailscale IP or hostname"),
+    ] = "100.97.187.60",
+    user: Annotated[
+        Optional[str],
+        typer.Option("--user", "-u", help="SSH username for remote machine"),
+    ] = None,
+    captions: Annotated[bool, typer.Option("--captions", help="Generate captions (requires GPU)")] = False,
+    template: Annotated[
+        Optional[str],
+        typer.Option("--template", help="Template preset (clean/tiktok/cinematic/bold)"),
+    ] = None,
+    format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: 16:9, 9:16, 1:1"),
+    ] = "16:9",
+    no_silence: Annotated[
+        bool,
+        typer.Option("--no-silence", help="Skip silence removal"),
+    ] = False,
+) -> None:
+    """Run pipeline on a remote GPU machine via Tailscale.
+
+    Transfers your video to the remote machine, processes it with
+    full CUDA/NVENC acceleration, and returns the result.
+
+    No files are left on the remote machine — temporary directory
+    is cleaned up automatically.
+    """
+    from clearcut.remote import RemoteGpuConfig, remote_pipeline
+
+    config = RemoteGpuConfig(host=host, user=user)
+
+    remote_pipeline(
+        config=config,
+        input_path=input,
+        output_path=output,
+        remove_silence=not no_silence,
+        generate_captions=captions,
+        template=template,
+        format=format,
+    )
+
+
+@app.command()
+def info() -> None:
+    """Show system information and GPU acceleration status."""
+    from clearcut.gpu import detect_gpu, print_accelerated_features, print_gpu_banner
+
+    caps = detect_gpu()
+    print_gpu_banner(caps)
+    print_accelerated_features(caps)
+
+    # Also show ffmpeg availability
+    import shutil
+
+    if shutil.which("ffmpeg"):
+        console.print("[green]✓[/green] ffmpeg installed")
+    else:
+        console.print("[red]✗[/red] ffmpeg not found — clearcut requires ffmpeg")
+
+    if shutil.which("ffprobe"):
+        console.print("[green]✓[/green] ffprobe installed")
 
 
 if __name__ == "__main__":
