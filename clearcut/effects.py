@@ -192,15 +192,16 @@ def add_hook_zoom(
                 "-i", str(input_path),
                 "-ss", str(hook_duration),
                 "-c", "copy",
+                "-avoid_negative_ts", "make_zero",
                 str(part2),
             ],
             capture_output=True, check=True,
         )
 
-        # Concatenate
+        # Concatenate (use absolute paths in concat file)
         concat_file = tmp / "concat.txt"
         concat_file.write_text(
-            f"file '{part1.name}'\nfile '{part2.name}'\n"
+            f"file '{part1}'\nfile '{part2}'\n"
         )
         subprocess.run(
             [

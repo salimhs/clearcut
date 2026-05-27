@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -152,14 +154,29 @@ def normalize_audio(
     else:
         stats = None
 
+    # Sanitize measured values — ffmpeg's loudnorm chokes on -inf
+    def _safe_float(val: Any, default: float) -> float:
+        """Convert to float, returning default if None, -inf, or nan."""
+        try:
+            f = float(val)
+            if math.isinf(f) or math.isnan(f):
+                return default
+            return f
+        except (TypeError, ValueError):
+            return default
+
     # Pass 2: apply normalization
     if stats:
+        measured_i = _safe_float(stats.get("input_i"), -24)
+        measured_lra = _safe_float(stats.get("input_lra"), 7)
+        measured_tp = _safe_float(stats.get("input_tp"), -1)
+        measured_thresh = _safe_float(stats.get("input_thresh"), -34)
         loudnorm_filter = (
             f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11"
-            f":measured_I={stats.get('input_i', -24)}"
-            f":measured_LRA={stats.get('input_lra', 7)}"
-            f":measured_TP={stats.get('input_tp', -1)}"
-            f":measured_thresh={stats.get('input_thresh', -34)}"
+            f":measured_I={measured_i}"
+            f":measured_LRA={measured_lra}"
+            f":measured_TP={measured_tp}"
+            f":measured_thresh={measured_thresh}"
             ":linear=true"
         )
     else:
