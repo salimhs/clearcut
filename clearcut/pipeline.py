@@ -17,15 +17,16 @@ console = Console()
 class Pipeline:
     """Orchestrates the full clearcut video editing pipeline.
 
-    Stages (in order):
-    1. Silence removal (VAD or auto-editor)
-    2. Audio normalization (EBU R128)
+    Stage order:
+    1. Silence removal
+    2. Audio normalization + ducking
     3. Compositing (PiP, image overlays)
-    4. Caption generation + burn-in
-    5. Colour grading (LUT + basic correction)
-    6. Format conversion (9:16, 1:1, etc.)
-    7. Transitions between segments
-    8. Final encode (hardware-accelerated)
+    4. Colour grading (LUT + basic correction)
+    5. Format conversion (9:16, 1:1, etc.)
+    6. Caption generation + burn-in (AFTER format so ASS positioning is correct)
+    7. Effects (punch zoom, hook zoom)
+    8. Transitions between segments
+    9. Final encode (hardware-accelerated)
     """
 
     def __init__(self, config: PipelineConfig):
@@ -33,6 +34,7 @@ class Pipeline:
         self._tmpdir: tempfile.TemporaryDirectory | None = None
         self._workdir: Path | None = None
         self._skip_encode: bool = False
+        self._intermediate_segments: list[Path] = []
 
     @property
     def workdir(self) -> Path:
@@ -62,27 +64,30 @@ class Pipeline:
         if self.config.context or self.config.images or self.config.assets:
             current = self._stage_composite(current)
 
-        # Stage 4: Captions
-        if self.config.generate_captions:
-            current = self._stage_captions(current)
-
-        # Stage 5: Colour grading — LUT and/or basic correction
+        # Stage 4: Colour grading — LUT and/or basic correction
         current = self._stage_colour(current)
 
-        # Stage 6: Format conversion (skip if already 16:9)
+        # Stage 5: Format conversion (apply BEFORE captions so ASS coords are right)
         if self.config.format != "16:9":
             current = self._stage_format(current)
 
-        # Stage 7: Transitions (if multiple context clips form segments)
-        # Transitions are applied when there are multiple context/B-roll
-        # clips that should be joined with effects between them.
+        # Stage 6: Captions (burn after correct dimensions are set)
+        if self.config.generate_captions:
+            current = self._stage_captions(current)
 
-        # Stage 8: Final encode (skip if compositor already produced lossless
-        # intermediate and no caption burn needed)
+        # Stage 7: Effects (punch zoom, hook zoom)
+        if self.config.punch_zoom:
+            current = self._stage_effects(current)
+
+        # Stage 8: Transitions between segments
+        if len(self._intermediate_segments) > 1:
+            current = self._stage_transitions(current)
+
+        # Stage 9: Final encode
         if not self._skip_encode:
             current = self._stage_encode(current)
 
-        # Move to final output — handle .mkv → .mp4 renaming
+        # Move to final output
         final = self.config.output
         if current.suffix == ".mkv" and final.suffix == ".mp4":
             final = final.with_suffix(".mkv")
@@ -134,14 +139,12 @@ class Pipeline:
         output = self.workdir / "03_composite.mkv"
 
         overlays = []
-        # Static images shown for 5 seconds at the start
         for i, img_path in enumerate(self.config.images):
             overlays.append(ImageOverlay(
                 image_path=img_path,
                 seconds=i * 5.0,
                 duration=5.0,
             ))
-        # Timestamped assets
         for asset in self.config.assets:
             overlays.append(ImageOverlay(
                 image_path=asset.path,
@@ -156,38 +159,10 @@ class Pipeline:
         )
         scene.render(output)
 
-        # If no captions burn needed, skip the encode stage too — we'll output
-        # the lossless intermediate as-is for the final step
         if not self.config.burn_captions:
             self._skip_encode = True
 
         return output
-
-    def _stage_captions(self, input_path: Path) -> Path:
-        from clearcut.captions import CaptionGenerator
-
-        console.print("\n[bold]Stage 4:[/bold] Captions")
-        style = get_style(self.config.style)
-        gen = CaptionGenerator(style=style)
-
-        words = gen.transcribe(input_path)
-        ass_content = gen.generate_ass(words)
-
-        ass_path = self.workdir / "captions.ass"
-        ass_path.write_text(ass_content)
-
-        if self.config.burn_captions:
-            # Preserve intermediate format — keep .mkv if coming from compositor
-            ext = input_path.suffix
-            output = self.workdir / f"04_captioned{ext}"
-            gen.burn(input_path, ass_path, output)
-            return output
-
-        # Just save the ASS file next to the output
-        final_ass = self.config.output.with_suffix(".ass")
-        shutil.copy2(ass_path, final_ass)
-        console.print(f"[green]Captions saved to {final_ass}[/green]")
-        return input_path
 
     def _stage_colour(self, input_path: Path) -> Path:
         """Apply LUT and/or basic colour correction."""
@@ -206,16 +181,16 @@ class Pipeline:
         if has_lut:
             from clearcut.color import apply_lut
 
-            console.print("\n[bold]Stage 5a:[/bold] LUT colour grade")
-            output = self.workdir / "05a_lut.mp4"
+            console.print("\n[bold]Stage 4a:[/bold] LUT colour grade")
+            output = self.workdir / "04a_lut.mp4"
             apply_lut(current, output, self.config.lut)
             current = output
 
         if has_correction:
             from clearcut.color import basic_correct
 
-            console.print("\n[bold]Stage 5b:[/bold] Colour correction")
-            output = self.workdir / "05b_corrected.mp4"
+            console.print("\n[bold]Stage 4b:[/bold] Colour correction")
+            output = self.workdir / "04b_corrected.mp4"
             basic_correct(
                 current, output,
                 brightness=self.config.brightness,
@@ -229,8 +204,8 @@ class Pipeline:
     def _stage_format(self, input_path: Path) -> Path:
         from clearcut.format import to_landscape, to_square, to_vertical
 
-        console.print(f"\n[bold]Stage 6:[/bold] Format conversion → {self.config.format}")
-        output = self.workdir / "06_formatted.mp4"
+        console.print(f"\n[bold]Stage 5:[/bold] Format conversion → {self.config.format}")
+        output = self.workdir / "05_formatted.mp4"
 
         fmt = self.config.format
         if fmt == "9:16":
@@ -247,11 +222,75 @@ class Pipeline:
 
         return output
 
+    def _stage_captions(self, input_path: Path) -> Path:
+        from clearcut.captions import CaptionGenerator
+
+        console.print("\n[bold]Stage 6:[/bold] Captions")
+        style = get_style(self.config.style)
+        gen = CaptionGenerator(style=style)
+
+        words = gen.transcribe(input_path)
+        ass_content = gen.generate_ass(words)
+
+        ass_path = self.workdir / "captions.ass"
+        ass_path.write_text(ass_content)
+
+        if self.config.burn_captions:
+            ext = input_path.suffix
+            output = self.workdir / f"06_captioned{ext}"
+            gen.burn(input_path, ass_path, output)
+            return output
+
+        # Save ASS file next to the output
+        final_ass = self.config.output.with_suffix(".ass")
+        shutil.copy2(ass_path, final_ass)
+        console.print(f"[green]Captions saved to {final_ass}[/green]")
+        return input_path
+
+    def _stage_effects(self, input_path: Path) -> Path:
+        """Apply punch/hook zoom effects."""
+        from clearcut.effects import add_hook_zoom, apply_punch_zoom
+
+        console.print("\n[bold]Stage 7:[/bold] Effects")
+        current = input_path
+
+        if self.config.hook_zoom:
+            console.print("  Adding hook zoom (first 2s)")
+            output = self.workdir / "07_hook_zoom.mp4"
+            add_hook_zoom(current, output)
+            current = output
+
+        if self.config.punch_zoom:
+            level = self.config.punch_zoom
+            console.print(f"  Applying {level}x punch zoom")
+            output = self.workdir / "07_punch_zoom.mp4"
+            apply_punch_zoom(current, output, zoom_in=level)
+            current = output
+
+        return current
+
+    def _stage_transitions(self, input_path: Path) -> Path:
+        """Apply transitions between multiple segments."""
+        from clearcut.transitions import apply_transitions
+
+        if len(self._intermediate_segments) < 2:
+            return input_path
+
+        console.print(f"\n[bold]Stage 8:[/bold] Transitions")
+        output = self.workdir / "08_transitions.mp4"
+        apply_transitions(
+            self._intermediate_segments,
+            output,
+            transition=self.config.transition,
+            duration=self.config.transition_duration,
+        )
+        return output
+
     def _stage_encode(self, input_path: Path) -> Path:
         from clearcut.encoder import encode
 
-        console.print("\n[bold]Stage 8:[/bold] Final encode")
-        output = self.workdir / "08_final.mp4"
+        console.print(f"\n[bold]Stage 9:[/bold] Final encode ({self.config.encoder_preset})")
+        output = self.workdir / "09_final.mp4"
         encode(
             input_path, output,
             preset=self.config.encoder_preset,
@@ -259,26 +298,9 @@ class Pipeline:
         )
         return output
 
-    def apply_transitions_to_segments(self, segment_paths: list[Path]) -> Path:
-        """Join multiple video segments with transitions.
-
-        This is a utility for callers that have pre-split segments (e.g. from
-        silence removal boundaries or multiple source clips) and want to apply
-        transitions between them before continuing the pipeline.
-
-        Returns:
-            Path to the joined output file.
-        """
-        from clearcut.transitions import apply_transitions
-
-        console.print("\n[bold]Stage 7:[/bold] Transitions")
-        output = self.workdir / "07_transitions.mp4"
-        apply_transitions(
-            segment_paths, output,
-            transition=self.config.transition,
-            duration=self.config.transition_duration,
-        )
-        return output
+    def add_segment(self, path: Path) -> None:
+        """Register a segment for transition processing."""
+        self._intermediate_segments.append(path)
 
     def clean(self) -> None:
         """Clean up temporary working directory."""

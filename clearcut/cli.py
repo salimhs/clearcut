@@ -129,6 +129,15 @@ def process(
         float,
         typer.Option("--transition-duration", help="Transition duration in seconds"),
     ] = 0.3,
+    # --- Effects ---
+    punch_zoom: Annotated[
+        float,
+        typer.Option("--punch-zoom", help="Punch zoom factor (0=off, 1.05=5%, 1.15=15%)"),
+    ] = 0.0,
+    hook_zoom: Annotated[
+        bool,
+        typer.Option("--hook-zoom/--no-hook-zoom", help="Quick zoom on first 2 seconds"),
+    ] = False,
     # --- Template ---
     template: Annotated[
         Optional[str],
@@ -167,6 +176,8 @@ def process(
         format=format,
         transition=transition,
         transition_duration=transition_duration,
+        punch_zoom=punch_zoom,
+        hook_zoom=hook_zoom,
         template=template,
     )
 

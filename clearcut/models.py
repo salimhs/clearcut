@@ -79,6 +79,10 @@ class PipelineConfig(BaseModel):
     transition: str = "fade"  # transition between segments
     transition_duration: float = 0.3
 
+    # Effects
+    punch_zoom: float = 0.0  # 0 = off, 1.05 = 5% zoom, 1.15 = 15% zoom
+    hook_zoom: bool = False  # quick zoom-in on first 2 seconds
+
     # Template — overrides individual flags when set
     template: str | None = None
 
@@ -113,6 +117,8 @@ class PipelineConfig(BaseModel):
         self.saturation = tpl.saturation
         self.contrast = tpl.contrast
         self.brightness = tpl.brightness
+        self.punch_zoom = tpl.punch_zoom
+        self.hook_zoom = tpl.hook_zoom
 
         if tpl.lut_path is not None:
             self.lut = Path(tpl.lut_path)

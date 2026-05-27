@@ -111,6 +111,8 @@ class Template:
     saturation: float
     contrast: float
     brightness: float
+    punch_zoom: float  # 0 = off, 1.05 = 5% zoom
+    hook_zoom: bool  # quick zoom on first 2s
 
 
 TEMPLATES: dict[str, Template] = {
@@ -126,6 +128,8 @@ TEMPLATES: dict[str, Template] = {
         saturation=1.0,
         contrast=1.0,
         brightness=0.0,
+        punch_zoom=0.0,
+        hook_zoom=False,
     ),
     "tiktok": Template(
         name="tiktok",
@@ -139,11 +143,13 @@ TEMPLATES: dict[str, Template] = {
         saturation=1.1,
         contrast=1.05,
         brightness=0.02,
+        punch_zoom=1.05,
+        hook_zoom=True,
     ),
     "cinematic": Template(
         name="cinematic",
         caption_style=MINIMAL,
-        lut_path=None,  # user supplies their cinematic .cube
+        lut_path=None,
         transition="dissolve",
         transition_duration=0.5,
         format="16:9",
@@ -152,6 +158,8 @@ TEMPLATES: dict[str, Template] = {
         saturation=0.85,
         contrast=1.15,
         brightness=-0.02,
+        punch_zoom=1.03,
+        hook_zoom=False,
     ),
     "bold": Template(
         name="bold",
@@ -165,6 +173,8 @@ TEMPLATES: dict[str, Template] = {
         saturation=1.2,
         contrast=1.1,
         brightness=0.02,
+        punch_zoom=1.08,
+        hook_zoom=True,
     ),
 }
 
