@@ -125,6 +125,7 @@ class Pipeline:
 
         console.print("\n[bold]Stage 2b:[/bold] Music ducking")
         output = self.workdir / "02b_ducked.mp4"
+        assert self.config.duck_music is not None
         add_ducking(
             input_path,
             self.config.duck_music,
@@ -183,6 +184,7 @@ class Pipeline:
 
             console.print("\n[bold]Stage 4a:[/bold] LUT colour grade")
             output = self.workdir / "04a_lut.mp4"
+            assert self.config.lut is not None
             apply_lut(current, output, self.config.lut)
             current = output
 
@@ -276,7 +278,7 @@ class Pipeline:
         if len(self._intermediate_segments) < 2:
             return input_path
 
-        console.print(f"\n[bold]Stage 8:[/bold] Transitions")
+        console.print("\n[bold]Stage 8:[/bold] Transitions")
         output = self.workdir / "08_transitions.mp4"
         apply_transitions(
             self._intermediate_segments,

@@ -130,7 +130,7 @@ def extract_clips(
 # ---------------------------------------------------------------------------
 
 
-def _transcribe(video_path: Path):
+def _transcribe(video_path: Path) -> list:
     """Transcribe video using WhisperX and return list of Word objects."""
     from clearcut.captions import CaptionGenerator
     from clearcut.styles import get_style
@@ -139,7 +139,7 @@ def _transcribe(video_path: Path):
     return gen.transcribe(video_path)
 
 
-def _build_transcript(words) -> str:
+def _build_transcript(words: list) -> str:
     """Build a readable transcript with timestamps from word list."""
     lines: list[str] = []
     chunk_size = 10
@@ -161,7 +161,7 @@ def _fmt_time(seconds: float) -> str:
 
 def _llm_analyze(
     transcript: str,
-    words,
+    words: list,
     num_clips: int,
     min_duration: float,
     max_duration: float,

@@ -8,7 +8,6 @@ import tempfile
 from pathlib import Path
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 console = Console()
 
@@ -34,7 +33,7 @@ def detect_audio_segments(input_path: Path, threshold: float = 0.5) -> list[Segm
     """
     try:
         import torch
-        import torchaudio
+        import torchaudio  # noqa: F401
     except ImportError:
         raise RuntimeError(
             "Silero-VAD requires torch and torchaudio. "

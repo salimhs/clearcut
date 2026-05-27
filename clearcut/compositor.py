@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -41,7 +42,6 @@ class CompositeScene:
         """
         from moviepy import (
             CompositeVideoClip,
-            ImageClip,
             VideoFileClip,
         )
 
@@ -88,7 +88,7 @@ class CompositeScene:
         console.print(f"[green]Composite written to {output_path}[/green]")
         return output_path
 
-    def _make_pip(self, pip_clip, main_clip):
+    def _make_pip(self, pip_clip: Any, main_clip: Any) -> Any:
         """Position and scale a picture-in-picture clip."""
         main_w, main_h = main_clip.size
         pip_w = int(main_w * self.pip_scale)
@@ -112,7 +112,7 @@ class CompositeScene:
 
         return pip_clip
 
-    def _make_image_overlay(self, overlay: ImageOverlay, main_clip):
+    def _make_image_overlay(self, overlay: ImageOverlay, main_clip: Any) -> Any:
         """Create an image overlay clip with optional transitions."""
         from moviepy import ImageClip
 

@@ -106,7 +106,7 @@ class PipelineConfig(BaseModel):
         # Override style from template's caption style name
         for name, preset_style in _caption_style_map().items():
             if preset_style == tpl.caption_style:
-                self.style = name
+                self.style = name  # type: ignore[assignment]
                 break
 
         self.normalize_audio = tpl.normalize_audio
@@ -126,7 +126,7 @@ class PipelineConfig(BaseModel):
         return self
 
 
-def _caption_style_map() -> dict:
+def _caption_style_map() -> dict[str, CaptionStyle]:
     """Lazy import to avoid circular dependency with styles module."""
     from clearcut.styles import PRESETS
 

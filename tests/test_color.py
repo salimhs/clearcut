@@ -1,0 +1,74 @@
+"""Tests for clearcut.color — LUT validation and parameter clamping."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from clearcut.color import _validate_cube_file, basic_correct, apply_lut
+
+
+class TestValidateCubeFile:
+    """Test _validate_cube_file with valid and invalid files."""
+
+    def test_valid_cube_file(self, tmp_path: Path) -> None:
+        cube = tmp_path / "test.cube"
+        cube.write_text(
+            "# Created by test\n"
+            "LUT_3D_SIZE 33\n"
+            "0.0 0.0 0.0\n"
+            "1.0 1.0 1.0\n"
+        )
+        assert _validate_cube_file(cube) is True
+
+    def test_no_header(self, tmp_path: Path) -> None:
+        cube = tmp_path / "bad.cube"
+        cube.write_text("0.0 0.0 0.0\n1.0 1.0 1.0\n")
+        assert _validate_cube_file(cube) is False
+
+    def test_nonexistent_file(self, tmp_path: Path) -> None:
+        assert _validate_cube_file(tmp_path / "missing.cube") is False
+
+    def test_case_insensitive_header(self, tmp_path: Path) -> None:
+        cube = tmp_path / "test.cube"
+        cube.write_text("lut_3d_size 17\n0.0 0.0 0.0\n")
+        assert _validate_cube_file(cube) is True
+
+
+class TestApplyLut:
+    """Test apply_lut parameter clamping."""
+
+    def test_file_not_found(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            apply_lut(
+                tmp_path / "missing.mp4",
+                tmp_path / "out.mp4",
+                tmp_path / "test.cube",
+            )
+
+    def test_lut_not_found(self, tmp_path: Path) -> None:
+        video = tmp_path / "test.mp4"
+        video.write_bytes(b"\x00")
+        with pytest.raises(FileNotFoundError, match="LUT file not found"):
+            apply_lut(video, tmp_path / "out.mp4", tmp_path / "missing.cube")
+
+
+class TestBasicCorrect:
+    """Test basic_correct parameter clamping."""
+
+    def test_file_not_found(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            basic_correct(tmp_path / "missing.mp4", tmp_path / "out.mp4")
+
+    def test_default_values_copy(self, tmp_path: Path, mocker) -> None:
+        """When all values are defaults, basic_correct copies the file."""
+        video = tmp_path / "test.mp4"
+        video.write_bytes(b"\x00" * 100)
+        output = tmp_path / "out.mp4"
+
+        mocker.patch("clearcut.color.shutil.which", return_value="/usr/bin/ffmpeg")
+
+        result = basic_correct(video, output)
+        assert result == output
+        assert output.exists()

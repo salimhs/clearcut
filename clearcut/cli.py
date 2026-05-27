@@ -158,10 +158,10 @@ def process(
         context=context or [],
         images=images or [],
         assets=parsed_assets,
-        style=style,
+        style=style,  # type: ignore[arg-type]
         output=output,
         remove_silence=not no_silence,
-        silence_method=silence_method,
+        silence_method=silence_method,  # type: ignore[arg-type]
         generate_captions=captions,
         burn_captions=burn,
         encoder_preset=preset,
