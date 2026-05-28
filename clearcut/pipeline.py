@@ -90,6 +90,10 @@ class Pipeline:
         if self.config.remove_silence and not self._check_interrupted():
             current = self._stage_silence(current)
 
+        # Stage 1b: Scene detection (split at scene boundaries after silence removal)
+        if self.config.detect_scenes and not self._check_interrupted():
+            current = self._stage_scene_detect(current)
+
         # Stage 2: Audio normalization
         if self.config.normalize_audio and not self._check_interrupted():
             current = self._stage_normalize_audio(current)
@@ -119,6 +123,10 @@ class Pipeline:
         # Stage 7: Effects (punch zoom, hook zoom)
         if self.config.punch_zoom and not self._check_interrupted():
             current = self._stage_effects(current)
+
+        # Stage 7b: Speed ramping
+        if self.config.speed_segments and not self._check_interrupted():
+            current = self._stage_speed_ramp(current)
 
         # Stage 8: Transitions between segments
         if len(self._intermediate_segments) > 1 and not self._check_interrupted():
@@ -156,6 +164,33 @@ class Pipeline:
             )
             progress.update(task, description="Silence removal complete")
         return output
+
+    def _stage_scene_detect(self, input_path: Path) -> Path:
+        """Detect scene boundaries and register segments for transitions."""
+        try:
+            from clearcut.scenes import detect_scene_boundaries, split_at_boundaries
+        except ImportError as exc:
+            console.print(f"[yellow]{exc} — skipping scene detection[/yellow]")
+            return input_path
+
+        console.print("\n[bold]Stage 1b:[/bold] Scene detection")
+        boundaries = detect_scene_boundaries(input_path)
+
+        if not boundaries:
+            console.print("[dim]No scene boundaries found — continuing[/dim]")
+            return input_path
+
+        seg_dir = self.workdir / "scenes"
+        segments = split_at_boundaries(
+            input_path, boundaries, seg_dir,
+            max_clip_duration=self.config.max_clip_duration,
+        )
+
+        for seg in segments:
+            self.add_segment(seg)
+
+        # Return first segment as current; transitions stage will combine them
+        return segments[0] if segments else input_path
 
     def _stage_normalize_audio(self, input_path: Path) -> Path:
         from clearcut.audio import normalize_audio
@@ -239,12 +274,32 @@ class Pipeline:
         return output
 
     def _stage_colour(self, input_path: Path) -> Path:
-        """Apply LUT and/or basic colour correction."""
+        """Apply LUT and/or basic colour correction (with optional preset)."""
+        # Resolve colour preset — preset provides base values, explicit overrides win
+        brightness = self.config.brightness
+        contrast = self.config.contrast
+        saturation = self.config.saturation
+        temperature: int = 0
+
+        if self.config.color_preset is not None:
+            from clearcut.styles import COLOR_PRESETS
+
+            preset = COLOR_PRESETS.get(self.config.color_preset, {})
+            # Preset sets the base; explicit non-default values override
+            if abs(brightness) < 0.001:
+                brightness = float(preset.get("brightness", 0.0))
+            if abs(contrast - 1.0) < 0.001:
+                contrast = float(preset.get("contrast", 1.0))
+            if abs(saturation - 1.0) < 0.001:
+                saturation = float(preset.get("saturation", 1.0))
+            temperature = int(preset.get("temperature", 0))
+
         has_lut = self.config.lut is not None
         has_correction = (
-            abs(self.config.brightness) >= 0.001
-            or abs(self.config.contrast - 1.0) >= 0.001
-            or abs(self.config.saturation - 1.0) >= 0.001
+            abs(brightness) >= 0.001
+            or abs(contrast - 1.0) >= 0.001
+            or abs(saturation - 1.0) >= 0.001
+            or temperature != 0
         )
 
         if not has_lut and not has_correction:
@@ -268,9 +323,10 @@ class Pipeline:
             output = self.workdir / "04b_corrected.mp4"
             basic_correct(
                 current, output,
-                brightness=self.config.brightness,
-                contrast=self.config.contrast,
-                saturation=self.config.saturation,
+                brightness=brightness,
+                contrast=contrast,
+                saturation=saturation,
+                temperature=temperature,
             )
             current = output
 
@@ -279,14 +335,18 @@ class Pipeline:
     def _stage_format(self, input_path: Path) -> Path:
         from clearcut.format import to_landscape, to_square, to_vertical
 
-        console.print(f"\n[bold]Stage 5:[/bold] Format conversion → {self.config.format}")
+        crop_method = self.config.smart_crop
+        console.print(
+            f"\n[bold]Stage 5:[/bold] Format conversion → {self.config.format}"
+            f" (crop={crop_method})"
+        )
         output = self.workdir / "05_formatted.mp4"
 
         fmt = self.config.format
         if fmt == "9:16":
-            to_vertical(input_path, output)
+            to_vertical(input_path, output, crop_method=crop_method)
         elif fmt == "1:1":
-            to_square(input_path, output)
+            to_square(input_path, output, crop_method=crop_method)
         elif fmt == "16:9":
             to_landscape(input_path, output)
         else:
@@ -348,6 +408,21 @@ class Pipeline:
             current = output
 
         return current
+
+    def _stage_speed_ramp(self, input_path: Path) -> Path:
+        """Apply variable speed segments."""
+        from clearcut.effects import (
+            apply_speed_segments,
+            parse_speed_segment,
+            validate_speed_segments,
+        )
+
+        console.print("\n[bold]Stage 7b:[/bold] Speed ramping")
+        segments = [parse_speed_segment(s) for s in self.config.speed_segments]
+        validate_speed_segments(segments)
+        output = self.workdir / "07b_speed.mp4"
+        apply_speed_segments(input_path, output, segments)
+        return output
 
     def _stage_transitions(self, input_path: Path) -> Path:
         """Apply transitions between multiple segments."""

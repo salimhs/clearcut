@@ -52,6 +52,10 @@ class PipelineConfig(BaseModel):
     """Top-level configuration for a clearcut pipeline run."""
 
     main: Path
+    intro_path: Path | None = None
+    outro_path: Path | None = None
+    intro_only: bool = False
+    outro_only: bool = False
     context: list[Path] = []
     images: list[Path] = []
     assets: list[AssetPosition] = []
@@ -77,6 +81,12 @@ class PipelineConfig(BaseModel):
 
     # Format / aspect ratio
     format: str = "16:9"  # "16:9", "9:16", "1:1"
+    smart_crop: str = "center"  # "center" or "face"
+    smart_crop_smooth: int = 5  # smoothing window for face tracking
+
+    # Scene detection
+    detect_scenes: bool = False
+    max_clip_duration: float = 0.0  # 0 = no forced splits
 
     # Transitions
     transition: str = "fade"  # transition between segments
@@ -85,6 +95,9 @@ class PipelineConfig(BaseModel):
     # Effects
     punch_zoom: float = 0.0  # 0 = off, 1.05 = 5% zoom, 1.15 = 15% zoom
     hook_zoom: bool = False  # quick zoom-in on first 2 seconds
+
+    # Speed ramping
+    speed_segments: list[str] = []
 
     # Watermark
     watermark_path: Path | None = None
@@ -95,6 +108,9 @@ class PipelineConfig(BaseModel):
     # Background music
     background_music: Path | None = None
     music_volume: float = 0.3
+
+    # Colour preset
+    color_preset: str | None = None
 
     # Template — overrides individual flags when set
     template: str | None = None
@@ -132,6 +148,7 @@ class PipelineConfig(BaseModel):
         self.brightness = tpl.brightness
         self.punch_zoom = tpl.punch_zoom
         self.hook_zoom = tpl.hook_zoom
+        self.color_preset = tpl.color_preset
 
         if tpl.lut_path is not None:
             self.lut = Path(tpl.lut_path)

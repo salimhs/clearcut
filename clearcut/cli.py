@@ -53,6 +53,22 @@ def main(
 @app.command()
 def process(
     main: Annotated[Path, typer.Option("--main", "-m", help="Main video file")],
+    intro: Annotated[
+        Optional[Path],
+        typer.Option("--intro", help="Intro video clip to prepend"),
+    ] = None,
+    outro: Annotated[
+        Optional[Path],
+        typer.Option("--outro", help="Outro video clip to append"),
+    ] = None,
+    intro_only: Annotated[
+        bool,
+        typer.Option("--intro-only", help="Only inject intro (skip outro)"),
+    ] = False,
+    outro_only: Annotated[
+        bool,
+        typer.Option("--outro-only", help="Only append outro (skip intro)"),
+    ] = False,
     context: Annotated[
         Optional[list[Path]],
         typer.Option("--context", "-c", help="Context/B-roll video files"),
@@ -140,6 +156,14 @@ def process(
         str,
         typer.Option("--format", help="Output format: 16:9, 9:16, 1:1"),
     ] = "16:9",
+    smart_crop: Annotated[
+        str,
+        typer.Option("--smart-crop", help="Crop mode: center (default) or face"),
+    ] = "center",
+    smart_crop_smooth: Annotated[
+        int,
+        typer.Option("--smart-crop-smooth", help="Smoothing window for face tracking"),
+    ] = 5,
     # --- Transitions ---
     transition: Annotated[
         str,
@@ -161,6 +185,10 @@ def process(
         bool,
         typer.Option("--hook-zoom/--no-hook-zoom", help="Quick zoom on first 2 seconds"),
     ] = False,
+    speed_segments: Annotated[
+        Optional[list[str]],
+        typer.Option("--speed-segments", help="Speed ramp segments (start-end:multiplier)"),
+    ] = None,
     # --- Watermark ---
     watermark: Annotated[
         Optional[Path],
@@ -178,6 +206,20 @@ def process(
         float,
         typer.Option("--watermark-opacity", help="Watermark opacity (0.0-1.0)"),
     ] = 0.7,
+    # --- Scene detection ---
+    detect_scenes: Annotated[
+        bool,
+        typer.Option("--detect-scenes", help="Detect and split at scene boundaries"),
+    ] = False,
+    max_clip_duration: Annotated[
+        float,
+        typer.Option("--max-clip-duration", help="Max segment duration (seconds, 0=off)"),
+    ] = 0.0,
+    # --- Colour preset ---
+    color_preset: Annotated[
+        Optional[str],
+        typer.Option("--color-preset", help="Colour preset (warm/cool/vintage/vibrant/drama)"),
+    ] = None,
     # --- Template ---
     template: Annotated[
         Optional[str],
@@ -217,6 +259,10 @@ def process(
 
     config_obj = PipelineConfig(
         main=Path(_pick(main, "main", main)),  # type: ignore[arg-type]
+        intro_path=_pick(intro, "intro", None),  # type: ignore[arg-type]
+        outro_path=_pick(outro, "outro", None),  # type: ignore[arg-type]
+        intro_only=_pick(intro_only, "intro_only", False),  # type: ignore[arg-type]
+        outro_only=_pick(outro_only, "outro_only", False),  # type: ignore[arg-type]
         context=[Path(p) for p in _pick(context, "context", None) or []],
         images=[Path(p) for p in _pick(images, "images", None) or []],
         assets=parsed_assets,
@@ -236,10 +282,16 @@ def process(
         contrast=_pick(contrast, "contrast", 1.0),  # type: ignore[arg-type]
         saturation=_pick(saturation, "saturation", 1.0),  # type: ignore[arg-type]
         format=_pick(format, "format", "16:9"),  # type: ignore[arg-type]
+        smart_crop=_pick(smart_crop, "smart_crop", "center"),  # type: ignore[arg-type]
+        smart_crop_smooth=_pick(smart_crop_smooth, "smart_crop_smooth", 5),  # type: ignore[arg-type]
         transition=_pick(transition, "transition", "fade"),  # type: ignore[arg-type]
         transition_duration=_pick(transition_duration, "transition_duration", 0.3),  # type: ignore[arg-type]
         punch_zoom=_pick(punch_zoom, "punch_zoom", 0.0),  # type: ignore[arg-type]
         hook_zoom=_pick(hook_zoom, "hook_zoom", False),  # type: ignore[arg-type]
+        speed_segments=_pick(speed_segments, "speed_segments", None) or [],  # type: ignore[arg-type]
+        detect_scenes=_pick(detect_scenes, "detect_scenes", False),  # type: ignore[arg-type]
+        max_clip_duration=_pick(max_clip_duration, "max_clip_duration", 0.0),  # type: ignore[arg-type]
+        color_preset=_pick(color_preset, "color_preset", None),  # type: ignore[arg-type]
         template=_pick(template, "template", None),  # type: ignore[arg-type]
         watermark_path=_pick(watermark, "watermark", None),  # type: ignore[arg-type]
         watermark_position=_pick(watermark_position, "watermark_position", "bottom-right"),  # type: ignore[arg-type]

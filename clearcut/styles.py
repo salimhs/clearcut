@@ -69,6 +69,19 @@ PRESETS: dict[str, CaptionStyle] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Colour presets — predefined colour correction settings
+# ---------------------------------------------------------------------------
+
+COLOR_PRESETS: dict[str, dict[str, float | int]] = {
+    "warm": {"temperature": 15, "saturation": 1.1},
+    "cool": {"temperature": -15, "saturation": 1.0},
+    "vintage": {"saturation": 0.7, "temperature": 10, "contrast": 0.9},
+    "vibrant": {"saturation": 1.3, "temperature": 5},
+    "drama": {"contrast": 1.3, "brightness": -0.05},
+}
+
+
 def get_style(name: str) -> CaptionStyle:
     """Get a caption style preset by name."""
     if name not in PRESETS:
@@ -116,6 +129,7 @@ class Template:
     brightness: float
     punch_zoom: float  # 0 = off, 1.05 = 5% zoom
     hook_zoom: bool  # quick zoom on first 2s
+    color_preset: str | None = None  # colour preset name
 
 
 TEMPLATES: dict[str, Template] = {

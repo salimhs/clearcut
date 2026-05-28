@@ -118,11 +118,33 @@ def _reformat(
         crop_h = int(src_w / target_ratio)
 
     # Position the crop window
-    if crop_method == "top":
+    if crop_method == "face":
+        try:
+            from clearcut.crop import compute_tracking_positions, detect_faces_in_frames
+
+            face_data = detect_faces_in_frames(str(input_path))
+            if face_data:
+                positions = compute_tracking_positions(
+                    face_data, src_w, src_h, crop_w, crop_h,
+                )
+                # Use the average position across all tracked frames
+                avg_x = sum(p.x for p in positions) // len(positions)
+                avg_y = sum(p.y for p in positions) // len(positions)
+                crop_x = max(0, min(src_w - crop_w, avg_x))
+                crop_y = max(0, min(src_h - crop_h, avg_y))
+            else:
+                # No faces found — fall back to center
+                crop_x = (src_w - crop_w) // 2
+                crop_y = (src_h - crop_h) // 2
+        except Exception:
+            log.warning("Face detection failed — falling back to center crop", exc_info=True)
+            crop_x = (src_w - crop_w) // 2
+            crop_y = (src_h - crop_h) // 2
+    elif crop_method == "top":
         crop_x = (src_w - crop_w) // 2
         crop_y = 0
     else:
-        # "center" and "smart" both default to center crop
+        # "center" (default)
         crop_x = (src_w - crop_w) // 2
         crop_y = (src_h - crop_h) // 2
 

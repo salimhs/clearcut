@@ -1,4 +1,4 @@
-"""Tests for clearcut.color — LUT validation and parameter clamping."""
+"""Tests for clearcut.color — LUT validation, parameter clamping, and color presets."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import pytest
 
 from clearcut.color import _validate_cube_file, basic_correct, apply_lut
 from clearcut.exceptions import FileError
+from clearcut.styles import COLOR_PRESETS
 
 
 class TestValidateCubeFile:
@@ -73,3 +74,44 @@ class TestBasicCorrect:
         result = basic_correct(video, output)
         assert result == output
         assert output.exists()
+
+
+class TestColorPresets:
+    """Test predefined colour correction presets."""
+
+    def test_warm_has_correct_values(self) -> None:
+        preset = COLOR_PRESETS["warm"]
+        assert preset["temperature"] == 15
+        assert preset["saturation"] == 1.1
+
+    def test_cool_has_correct_values(self) -> None:
+        preset = COLOR_PRESETS["cool"]
+        assert preset["temperature"] == -15
+        assert preset["saturation"] == 1.0
+
+    def test_vintage_has_correct_values(self) -> None:
+        preset = COLOR_PRESETS["vintage"]
+        assert preset["saturation"] == 0.7
+        assert preset["temperature"] == 10
+        assert preset["contrast"] == 0.9
+
+    def test_vibrant_has_correct_values(self) -> None:
+        preset = COLOR_PRESETS["vibrant"]
+        assert preset["saturation"] == 1.3
+        assert preset["temperature"] == 5
+
+    def test_drama_has_correct_values(self) -> None:
+        preset = COLOR_PRESETS["drama"]
+        assert preset["contrast"] == 1.3
+        assert preset["brightness"] == -0.05
+
+    def test_all_presets_in_valid_ranges(self) -> None:
+        for name, preset in COLOR_PRESETS.items():
+            if "saturation" in preset:
+                assert 0.0 <= preset["saturation"] <= 2.0
+            if "contrast" in preset:
+                assert 0.0 <= preset["contrast"] <= 2.0
+            if "brightness" in preset:
+                assert -1.0 <= preset["brightness"] <= 1.0
+            if "temperature" in preset:
+                assert -100 <= preset["temperature"] <= 100

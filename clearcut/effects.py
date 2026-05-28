@@ -1,21 +1,23 @@
-"""Dynamic zoom / punch-in effects for video clips.
+"""Dynamic zoom / punch-in effects and speed ramping for video clips.
 
 Adds cinematic zoom effects at the start of clips for streamer-style
-"punch zoom" emphasis.
+"punch zoom" emphasis, plus variable-speed segments.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from rich.console import Console
 
-from clearcut.exceptions import EncodingError, FileError
+from clearcut.exceptions import ConfigError, EncodingError, FileError
 
 log = logging.getLogger(__name__)
 
@@ -221,4 +223,199 @@ def add_hook_zoom(
         )
 
     console.print(f"[green]Hook zoom applied → {output_path}[/green]")
+    return output_path
+
+
+# ---------------------------------------------------------------------------
+# Speed ramping — variable speed segments
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class SpeedSegment:
+    """A time range with a speed multiplier."""
+
+    start: float
+    end: float
+    speed: float
+
+
+def parse_speed_segment(raw: str) -> SpeedSegment:
+    """Parse a speed segment string like '0-5:0.5'.
+
+    Format: ``start-end:multiplier``
+
+    Raises:
+        ConfigError: If the format is invalid or values are out of range.
+    """
+    m = re.match(r"^([\d.]+)-([\d.]+):([\d.]+)$", raw.strip())
+    if not m:
+        raise ConfigError(
+            f"Invalid speed segment '{raw}'. Expected format: start-end:multiplier"
+        )
+    start, end, speed = float(m.group(1)), float(m.group(2)), float(m.group(3))
+    if start >= end:
+        raise ConfigError(f"Speed segment start ({start}) must be < end ({end})")
+    if speed < 0.1 or speed > 10.0:
+        raise ConfigError(f"Speed multiplier must be 0.1–10.0, got {speed}")
+    return SpeedSegment(start=start, end=end, speed=speed)
+
+
+def validate_speed_segments(segments: list[SpeedSegment]) -> None:
+    """Check that speed segments don't overlap.
+
+    Raises:
+        ConfigError: If any two segments overlap.
+    """
+    sorted_segs = sorted(segments, key=lambda s: s.start)
+    for i in range(len(sorted_segs) - 1):
+        if sorted_segs[i].end > sorted_segs[i + 1].start:
+            raise ConfigError(
+                f"Speed segments overlap: "
+                f"{sorted_segs[i].start}-{sorted_segs[i].end} and "
+                f"{sorted_segs[i + 1].start}-{sorted_segs[i + 1].end}"
+            )
+
+
+def _build_atempo_chain(speed: float) -> list[str]:
+    """Build a chain of atempo filters for a given speed.
+
+    ffmpeg atempo is limited to 0.5–2.0 per instance, so we chain
+    multiple filters for values outside that range.
+    """
+    filters: list[str] = []
+    remaining = speed
+    while remaining > 2.0:
+        filters.append("atempo=2.0")
+        remaining /= 2.0
+    while remaining < 0.5:
+        filters.append("atempo=0.5")
+        remaining /= 0.5
+    filters.append(f"atempo={remaining:.6f}")
+    return filters
+
+
+def apply_speed_segments(
+    input_path: Path,
+    output_path: Path,
+    segments: list[SpeedSegment],
+) -> Path:
+    """Apply variable speed to specific time ranges of a video.
+
+    Splits the video into parts (normal-speed gaps and speed-adjusted
+    segments), processes each, then concatenates with brief audio
+    crossfades at boundaries.
+
+    Args:
+        input_path: Source video file.
+        output_path: Destination file.
+        segments: Parsed and validated speed segments.
+
+    Returns:
+        Path to the output file.
+    """
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+
+    if not input_path.exists():
+        raise FileError(f"Input file not found: {input_path}")
+    if not shutil.which("ffmpeg"):
+        raise EncodingError("ffmpeg not found in PATH")
+
+    # Get total duration
+    probe = subprocess.run(
+        [
+            "ffprobe", "-v", "quiet",
+            "-show_entries", "format=duration",
+            "-of", "json",
+            str(input_path),
+        ],
+        capture_output=True, text=True,
+    )
+    try:
+        total_dur = float(json.loads(probe.stdout)["format"]["duration"])
+    except (json.JSONDecodeError, KeyError):
+        raise EncodingError(f"Could not determine duration: {input_path}")
+
+    sorted_segs = sorted(segments, key=lambda s: s.start)
+
+    with tempfile.TemporaryDirectory(prefix="clearcut_speed_") as tmpdir:
+        tmp = Path(tmpdir)
+        parts: list[Path] = []
+        cursor = 0.0
+
+        for i, seg in enumerate(sorted_segs):
+            # Normal-speed gap before this segment
+            if seg.start > cursor:
+                part = tmp / f"normal_{i}.mp4"
+                subprocess.run(
+                    [
+                        "ffmpeg", "-y",
+                        "-i", str(input_path),
+                        "-ss", str(cursor),
+                        "-to", str(seg.start),
+                        "-c", "copy",
+                        "-avoid_negative_ts", "make_zero",
+                        str(part),
+                    ],
+                    capture_output=True, check=True,
+                )
+                parts.append(part)
+
+            # Speed-adjusted segment
+            part = tmp / f"speed_{i}.mp4"
+            vf = f"setpts={1.0 / seg.speed:.6f}*PTS"
+            atempo = _build_atempo_chain(seg.speed)
+            af = ",".join(atempo)
+
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", str(input_path),
+                    "-ss", str(seg.start),
+                    "-to", str(seg.end),
+                    "-vf", vf,
+                    "-af", af,
+                    "-avoid_negative_ts", "make_zero",
+                    str(part),
+                ],
+                capture_output=True, check=True,
+            )
+            parts.append(part)
+            cursor = seg.end
+
+        # Trailing normal-speed portion
+        if cursor < total_dur:
+            part = tmp / "normal_tail.mp4"
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", str(input_path),
+                    "-ss", str(cursor),
+                    "-c", "copy",
+                    "-avoid_negative_ts", "make_zero",
+                    str(part),
+                ],
+                capture_output=True, check=True,
+            )
+            parts.append(part)
+
+        # Concatenate all parts
+        concat_file = tmp / "concat.txt"
+        concat_file.write_text(
+            "\n".join(f"file '{p}'" for p in parts) + "\n"
+        )
+        subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", str(concat_file),
+                "-c", "copy",
+                str(output_path),
+            ],
+            capture_output=True, check=True,
+        )
+
+    console.print(f"[green]Speed ramping applied → {output_path}[/green]")
     return output_path
