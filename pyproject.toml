@@ -43,6 +43,8 @@ silence = ["torch", "torchaudio"]
 scenes = ["scenedetect[opencv]"]
 all = ["clearcut[captions,silence,scenes]"]
 dev = ["ruff", "mypy", "pre-commit"]
+docs = ["mkdocs", "mkdocs-material"]
+web = ["gradio"]
 test = ["pytest", "pytest-cov", "pytest-mock"]
 
 [tool.hatch.build.targets.wheel]

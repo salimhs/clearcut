@@ -12,6 +12,7 @@ from rich.console import Console
 
 
 from clearcut.exceptions import EncodingError, FileError
+
 log = logging.getLogger(__name__)
 
 console = Console()
@@ -43,14 +44,19 @@ def detect_aspect(input_path: Path) -> dict:
 
     result = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-select_streams", "v:0",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "v:0",
             "-show_entries",
             "stream=width,height,display_aspect_ratio",
-            "-of", "json",
+            "-of",
+            "json",
             str(input_path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 
     try:
@@ -125,7 +131,11 @@ def _reformat(
             face_data = detect_faces_in_frames(str(input_path))
             if face_data:
                 positions = compute_tracking_positions(
-                    face_data, src_w, src_h, crop_w, crop_h,
+                    face_data,
+                    src_w,
+                    src_h,
+                    crop_w,
+                    crop_h,
                 )
                 # Use the average position across all tracked frames
                 avg_x = sum(p.x for p in positions) // len(positions)
@@ -148,16 +158,17 @@ def _reformat(
         crop_x = (src_w - crop_w) // 2
         crop_y = (src_h - crop_h) // 2
 
-    vf = (
-        f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},"
-        f"scale={target_w}:{target_h}:flags=lanczos"
-    )
+    vf = f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},scale={target_w}:{target_h}:flags=lanczos"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(input_path),
-        "-vf", vf,
-        "-c:a", "copy",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_path),
+        "-vf",
+        vf,
+        "-c:a",
+        "copy",
         str(output_path),
     ]
     subprocess.run(cmd, check=True, capture_output=True)

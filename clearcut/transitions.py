@@ -12,6 +12,7 @@ from rich.console import Console
 
 
 from clearcut.exceptions import ConfigError, EncodingError, FileError
+
 log = logging.getLogger(__name__)
 
 console = Console()
@@ -37,12 +38,17 @@ def _get_duration(path: Path) -> float:
     """Get the duration of a media file in seconds via ffprobe."""
     result = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-show_entries", "format=duration",
-            "-of", "json",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
             str(path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     try:
         data = json.loads(result.stdout)
@@ -149,9 +155,7 @@ def apply_transitions(
 
     # Audio: concat all audio streams sequentially
     audio_inputs = "".join(f"[{i}:a]" for i in range(n))
-    filter_parts.append(
-        f"{audio_inputs}concat=n={n}:v=0:a=1[aout]"
-    )
+    filter_parts.append(f"{audio_inputs}concat=n={n}:v=0:a=1[aout]")
 
     filter_complex = ";".join(filter_parts)
 
@@ -159,14 +163,22 @@ def apply_transitions(
         ["ffmpeg", "-y"]
         + inputs
         + [
-            "-filter_complex", filter_complex,
-            "-map", "[vout]",
-            "-map", "[aout]",
-            "-c:v", "libx264",
-            "-preset", "fast",
-            "-c:a", "aac",
-            "-b:a", "192k",
-            "-movflags", "+faststart",
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[vout]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
             str(output_path),
         ]
     )

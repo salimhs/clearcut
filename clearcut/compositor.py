@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from rich.console import Console
+
 log = logging.getLogger(__name__)
 
 
@@ -152,10 +153,13 @@ class CompositeScene:
         # Transition (skip for watermarks — they should be persistent)
         if overlay.transition == "fade" and not overlay.is_watermark:
             from moviepy.video.fx import FadeIn, FadeOut
+
             fade_dur = min(0.5, duration / 4)
-            img_clip = img_clip.with_effects([
-                FadeIn(fade_dur),
-                FadeOut(fade_dur),
-            ])
+            img_clip = img_clip.with_effects(
+                [
+                    FadeIn(fade_dur),
+                    FadeOut(fade_dur),
+                ]
+            )
 
         return img_clip

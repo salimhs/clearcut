@@ -1,0 +1,11 @@
+name: bold
+description: High-impact, saturated, fast-paced
+format: "16:9"
+transition: wiperight
+transition_duration: 0.15
+audio_target_lufs: -11.0
+brightness: 0.05
+contrast: 1.2
+saturation: 1.4
+silence_method: vad
+style: bold

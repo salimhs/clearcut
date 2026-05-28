@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 
 from clearcut.models import CaptionStyle
+
 log = logging.getLogger(__name__)
 
 DEFAULT = CaptionStyle(
@@ -203,9 +204,7 @@ def get_template(name: str) -> Template:
         ValueError: If *name* is not a known template.
     """
     if name not in TEMPLATES:
-        raise ValueError(
-            f"Unknown template '{name}'. Choose from: {', '.join(TEMPLATES)}"
-        )
+        raise ValueError(f"Unknown template '{name}'. Choose from: {', '.join(TEMPLATES)}")
     return TEMPLATES[name]
 
 

@@ -1,0 +1,11 @@
+name: cinematic
+description: Cinematic look with warm tones and pillarboxing
+format: "16:9"
+transition: dissolve
+transition_duration: 0.5
+audio_target_lufs: -16.0
+brightness: -0.05
+contrast: 1.15
+saturation: 0.9
+silence_method: vad
+style: modern

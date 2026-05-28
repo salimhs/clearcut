@@ -47,12 +47,14 @@ class CaptionGenerator:
         try:
             import faster_whisper
 
-            console.print(f"[cyan]Transcribing {audio_path.name} with faster-whisper (CPU)...[/cyan]")
+            console.print(
+                f"[cyan]Transcribing {audio_path.name} with faster-whisper (CPU)...[/cyan]"
+            )
             model = faster_whisper.WhisperModel("large-v3", device="cpu", compute_type="int8")
             segments, info = model.transcribe(str(audio_path), word_timestamps=True)
             words: list[Word] = []
             for seg in segments:
-                for w in (seg.words or []):
+                for w in seg.words or []:
                     words.append(Word(text=w.word, start=w.start, end=w.end))
             console.print(f"[green]Transcribed {len(words)} words[/green]")
             return words
@@ -82,7 +84,11 @@ class CaptionGenerator:
             language_code=result["language"], device=device
         )
         aligned = whisperx.align(
-            result["segments"], align_model, metadata, audio, device,
+            result["segments"],
+            align_model,
+            metadata,
+            audio,
+            device,
             return_char_alignments=False,
         )
 
@@ -142,9 +148,7 @@ class CaptionGenerator:
 
             start_ts = _seconds_to_ass_time(start)
             end_ts = _seconds_to_ass_time(end)
-            events.append(
-                f"Dialogue: 0,{start_ts},{end_ts},Default,,0,0,0,,{text}"
-            )
+            events.append(f"Dialogue: 0,{start_ts},{end_ts},Default,,0,0,0,,{text}")
 
         return header + "\n".join(events) + "\n"
 
@@ -155,12 +159,18 @@ class CaptionGenerator:
         # Use absolute path with proper ffmpeg escaping via filter argument syntax
         ass_abs = ass_path.resolve()
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(video_path),
-            "-vf", f"ass={ass_abs}",
-            "-c:v", "libx264",
-            "-c:a", "copy",
-            "-preset", "fast",
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-vf",
+            f"ass={ass_abs}",
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "copy",
+            "-preset",
+            "fast",
             str(output_path),
         ]
         subprocess.run(cmd, check=True)

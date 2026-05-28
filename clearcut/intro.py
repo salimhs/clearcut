@@ -26,13 +26,19 @@ def _get_resolution(path: Path) -> tuple[int, int]:
     """Return (width, height) of a video file."""
     probe = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-select_streams", "v:0",
-            "-show_entries", "stream=width,height",
-            "-of", "json",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "json",
             str(path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     try:
         info = json.loads(probe.stdout)
@@ -53,14 +59,16 @@ def _scale_to_match(
         shutil.copy2(clip_path, output_path)
         return output_path
 
-    console.print(
-        f"[dim]Scaling {clip_path.name} from {cw}×{ch} → {target_w}×{target_h}[/dim]"
-    )
+    console.print(f"[dim]Scaling {clip_path.name} from {cw}×{ch} → {target_w}×{target_h}[/dim]")
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(clip_path),
-        "-vf", f"scale={target_w}:{target_h}:flags=lanczos",
-        "-c:a", "aac",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(clip_path),
+        "-vf",
+        f"scale={target_w}:{target_h}:flags=lanczos",
+        "-c:a",
+        "aac",
         str(output_path),
     ]
     subprocess.run(cmd, capture_output=True, check=True)
@@ -109,12 +117,17 @@ def inject_intro(
         # Get intro duration for xfade offset
         probe = subprocess.run(
             [
-                "ffprobe", "-v", "quiet",
-                "-show_entries", "format=duration",
-                "-of", "json",
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "json",
                 str(scaled_intro),
             ],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         try:
             intro_dur = float(json.loads(probe.stdout)["format"]["duration"])
@@ -124,15 +137,20 @@ def inject_intro(
         offset = max(0, intro_dur - transition_duration)
 
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(scaled_intro),
-            "-i", str(main_path),
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(scaled_intro),
+            "-i",
+            str(main_path),
             "-filter_complex",
             f"[0:v][1:v]xfade=transition={transition}"
             f":duration={transition_duration}:offset={offset}[vout];"
             f"[0:a][1:a]acrossfade=d={transition_duration}[aout]",
-            "-map", "[vout]",
-            "-map", "[aout]",
+            "-map",
+            "[vout]",
+            "-map",
+            "[aout]",
             str(output_path),
         ]
         subprocess.run(cmd, capture_output=True, check=True)
@@ -183,12 +201,17 @@ def append_outro(
         # Get main duration for xfade offset
         probe = subprocess.run(
             [
-                "ffprobe", "-v", "quiet",
-                "-show_entries", "format=duration",
-                "-of", "json",
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "json",
                 str(main_path),
             ],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         try:
             main_dur = float(json.loads(probe.stdout)["format"]["duration"])
@@ -198,15 +221,20 @@ def append_outro(
         offset = max(0, main_dur - transition_duration)
 
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(main_path),
-            "-i", str(scaled_outro),
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(main_path),
+            "-i",
+            str(scaled_outro),
             "-filter_complex",
             f"[0:v][1:v]xfade=transition={transition}"
             f":duration={transition_duration}:offset={offset}[vout];"
             f"[0:a][1:a]acrossfade=d={transition_duration}[aout]",
-            "-map", "[vout]",
-            "-map", "[aout]",
+            "-map",
+            "[vout]",
+            "-map",
+            "[aout]",
             str(output_path),
         ]
         subprocess.run(cmd, capture_output=True, check=True)

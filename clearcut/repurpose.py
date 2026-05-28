@@ -10,11 +10,13 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from rich.console import Console
+
+from clearcut.llm import LlmProvider, get_provider
+
 log = logging.getLogger(__name__)
 
 console = Console()
@@ -45,6 +47,7 @@ def detect_highlights(
     min_duration: float = 20.0,
     max_duration: float = 90.0,
     model: str = "sonnet",
+    provider: LlmProvider | None = None,
 ) -> HighlightResult:
     """Analyze a video and detect the best highlight clips using AI.
 
@@ -60,6 +63,8 @@ def detect_highlights(
         min_duration: Minimum clip duration in seconds.
         max_duration: Maximum clip duration in seconds.
         model: Claude model to use (sonnet, opus, haiku).
+        provider: Optional LLM provider instance. If not given, one is created
+            from the ``model`` param.
 
     Returns:
         HighlightResult with detected clips.
@@ -74,7 +79,10 @@ def detect_highlights(
     duration = words[-1].end if words else 0
 
     console.print(f"[cyan]Analyzing transcript for top {num_clips} highlights...[/cyan]")
-    clips = _llm_analyze(transcript, words, num_clips, min_duration, max_duration, model)
+
+    if provider is None:
+        provider = get_provider(model=model)
+    clips = _llm_analyze(transcript, words, num_clips, min_duration, max_duration, provider)
 
     console.print(f"[green]Found {len(clips)} highlight clips[/green]")
     return HighlightResult(clips=clips, total_duration=duration)
@@ -112,12 +120,18 @@ def extract_clips(
             f"({clip.start:.1f}s - {clip.end:.1f}s, {dur:.0f}s)"
         )
         cmd = [
-            "ffmpeg", "-y",
-            "-ss", f"{clip.start:.3f}",
-            "-i", str(video_path),
-            "-to", f"{dur:.3f}",
-            "-c", "copy",
-            "-avoid_negative_ts", "make_zero",
+            "ffmpeg",
+            "-y",
+            "-ss",
+            f"{clip.start:.3f}",
+            "-i",
+            str(video_path),
+            "-to",
+            f"{dur:.3f}",
+            "-c",
+            "copy",
+            "-avoid_negative_ts",
+            "make_zero",
             str(out_path),
         ]
         subprocess.run(cmd, capture_output=True, check=True)
@@ -167,55 +181,25 @@ def _llm_analyze(
     num_clips: int,
     min_duration: float,
     max_duration: float,
-    model: str,
+    provider: LlmProvider,
 ) -> list[HighlightClip]:
-    """Send transcript to Claude CLI and parse the response."""
-    prompt = (
-        "You are a professional video editor analyzing a transcript to find "
-        "the BEST clips for short-form content (TikTok, Reels, Shorts).\n\n"
-        f"TRANSCRIPT (with timestamps):\n{transcript}\n\n"
-        f"TASK: Find the top {num_clips} highlight segments that would make "
-        "the best short-form video clips.\n\n"
-        f"RULES:\n"
-        f"- Each clip must be between {min_duration:.0f} and {max_duration:.0f} "
-        "seconds long\n"
-        "- Prioritize: strong openings/hooks, emotional peaks, quotable lines, "
-        "funny moments, surprising revelations, passionate arguments, "
-        "concise story moments\n"
-        "- Clips should feel self-contained (a viewer should understand them "
-        "without context)\n"
-        "- Avoid: rambling, technical jargon without setup, inside jokes, "
-        "off-topic tangents\n"
-        "- Timestamps must be ACCURATE — use the EXACT timestamps from the "
-        "transcript above\n"
-        "- Prefer shorter clips over longer ones when the content is dense\n\n"
-        "Respond with ONLY a valid JSON array (no markdown, no explanation):\n"
-        "[\n"
-        '  {\n'
-        '    "start": float,\n'
-        '    "end": float,\n'
-        '    "title": "short descriptive title",\n'
-        '    "reason": "why this clip works for short-form",\n'
-        '    "virality_score": 0.0 to 1.0\n'
-        "  }\n"
-        "]\n\n"
-        "If no good clips are found, return an empty array: []"
+    """Send transcript to LLM provider and parse the response."""
+
+    duration = words[-1].end if words else 0
+    clip_data = provider.select_clips(
+        transcript=transcript,
+        num_clips=num_clips,
+        min_duration=min_duration,
+        max_duration=max_duration,
+        video_duration=duration,
     )
 
-    response = _call_llm(prompt, model)
-
     try:
-        if "```json" in response:
-            response = response.split("```json")[1].split("```")[0].strip()
-        elif "```" in response:
-            response = response.split("```")[1].split("```")[0].strip()
-
-        clips_data = json.loads(response)
-        if not isinstance(clips_data, list):
-            clips_data = [clips_data]
+        if not isinstance(clip_data, list):
+            clip_data = [clip_data]
 
         clips: list[HighlightClip] = []
-        for item in clips_data:
+        for item in clip_data:
             clip = HighlightClip(
                 start=float(item["start"]),
                 end=float(item["end"]),
@@ -233,42 +217,9 @@ def _llm_analyze(
 
     except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
         console.print(f"[yellow]Failed to parse LLM response: {e}[/yellow]")
-        console.print(f"[dim]Raw response: {response[:500]}[/dim]")
+        clip_data_str = str(clip_data)[:500]
+        console.print(f"[dim]Raw response: {clip_data_str}[/dim]")
         return []
-
-
-def _call_llm(prompt: str, model: str = "sonnet") -> str:
-    """Call Claude CLI with the given prompt and return the response."""
-    import shutil
-
-    claude_bin = shutil.which("claude")
-    if not claude_bin:
-        raise RuntimeError(
-            "Claude CLI not found. Install with: "
-            "npm install -g @anthropic-ai/claude-code"
-        )
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, prefix="clearcut_"
-    ) as f:
-        f.write(prompt)
-        prompt_path = f.name
-
-    try:
-        cmd = [
-            claude_bin, "-p", f"@{prompt_path}",
-            "--allowedTools", "Read",
-            "--max-turns", "1",
-            "--model", model,
-            "--output-format", "text",
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        return result.stdout
-    except subprocess.TimeoutExpired:
-        console.print("[red]Claude timed out — LLM analysis failed[/red]")
-        return "[]"
-    finally:
-        Path(prompt_path).unlink(missing_ok=True)
 
 
 def repurpose(
@@ -278,6 +229,7 @@ def repurpose(
     min_duration: float = 20.0,
     max_duration: float = 90.0,
     process: bool = True,
+    llm_provider: str = "claude",
     **pipeline_kwargs,
 ) -> list[Path]:
     """High-level entry point: detect highlights → extract → optionally process.
@@ -291,6 +243,7 @@ def repurpose(
         min_duration: Minimum clip duration.
         max_duration: Maximum clip duration.
         process: If True, run each clip through the full ClearCut pipeline.
+        llm_provider: LLM provider name (claude).
         **pipeline_kwargs: Arguments passed to PipelineConfig
             (template, style, captions, etc.)
 
@@ -307,7 +260,13 @@ def repurpose(
     console.print(f"Input: {input_path.name}")
     console.print(f"Target: {num_clips} clips ({min_duration:.0f}-{max_duration:.0f}s each)")
 
-    highlights = detect_highlights(input_path, num_clips, min_duration, max_duration)
+    highlights = detect_highlights(
+        input_path,
+        num_clips,
+        min_duration,
+        max_duration,
+        provider=get_provider(llm_provider),
+    )
 
     if not highlights.clips:
         console.print("[yellow]No highlights detected — cannot repurpose[/yellow]")

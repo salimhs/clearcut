@@ -11,6 +11,7 @@ from rich.console import Console
 
 
 from clearcut.exceptions import EncodingError, FileError
+
 log = logging.getLogger(__name__)
 
 console = Console()
@@ -84,10 +85,7 @@ def apply_lut(
         )
 
     strength = max(0.0, min(1.0, strength))
-    console.print(
-        f"[cyan]Applying LUT {lut_path.name} "
-        f"(strength {strength:.0%})[/cyan]"
-    )
+    console.print(f"[cyan]Applying LUT {lut_path.name} (strength {strength:.0%})[/cyan]")
 
     lut_abs = lut_path.resolve()
 
@@ -104,10 +102,14 @@ def apply_lut(
         )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(input_path),
-        "-filter_complex" if strength < 1.0 else "-vf", vf,
-        "-c:a", "copy",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_path),
+        "-filter_complex" if strength < 1.0 else "-vf",
+        vf,
+        "-c:a",
+        "copy",
         str(output_path),
     ]
     subprocess.run(cmd, check=True, capture_output=True)
@@ -207,10 +209,14 @@ def basic_correct(
     vf = ",".join(filters)
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(input_path),
-        "-vf", vf,
-        "-c:a", "copy",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_path),
+        "-vf",
+        vf,
+        "-c:a",
+        "copy",
         str(output_path),
     ]
     subprocess.run(cmd, check=True, capture_output=True)

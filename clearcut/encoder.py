@@ -34,7 +34,8 @@ def detect_hardware() -> HWAccel:
 
     result = subprocess.run(
         ["ffmpeg", "-hide_banner", "-encoders"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     encoder_list = result.stdout
 
@@ -50,16 +51,27 @@ def detect_hardware() -> HWAccel:
         if encoder in encoder_list:
             # Verify the encoder actually works with a quick probe
             test_cmd = [
-                "ffmpeg", "-hide_banner",
-                "-f", "lavfi", "-i", "nullsrc=s=64x64:d=0.1",
-                "-c:v", encoder,
+                "ffmpeg",
+                "-hide_banner",
+                "-f",
+                "lavfi",
+                "-i",
+                "nullsrc=s=64x64:d=0.1",
+                "-c:v",
+                encoder,
             ]
             if device:
                 test_cmd = [
-                    "ffmpeg", "-hide_banner",
-                    "-init_hw_device", f"{name}={name}:{device}",
-                    "-f", "lavfi", "-i", "nullsrc=s=64x64:d=0.1",
-                    "-c:v", encoder,
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-init_hw_device",
+                    f"{name}={name}:{device}",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "nullsrc=s=64x64:d=0.1",
+                    "-c:v",
+                    encoder,
                 ]
             test_cmd += ["-f", "null", "-"]
 
@@ -124,11 +136,16 @@ def encode(
     # Hardware-specific input flags
     if hw.device and hw.name == "vaapi":
         cmd = [
-            "ffmpeg", "-y",
-            "-init_hw_device", f"vaapi=vaapi:{hw.device}",
-            "-hwaccel", "vaapi",
-            "-hwaccel_output_format", "vaapi",
-            "-i", str(input_path),
+            "ffmpeg",
+            "-y",
+            "-init_hw_device",
+            f"vaapi=vaapi:{hw.device}",
+            "-hwaccel",
+            "vaapi",
+            "-hwaccel_output_format",
+            "vaapi",
+            "-i",
+            str(input_path),
         ]
 
     # Video encoder settings
@@ -144,9 +161,12 @@ def encode(
             "slow": "p7",
         }
         cmd += [
-            "-preset", nvenc_presets.get(preset, "p4"),
-            "-rc", "constqp",
-            "-qp", str(crf),
+            "-preset",
+            nvenc_presets.get(preset, "p4"),
+            "-rc",
+            "constqp",
+            "-qp",
+            str(crf),
         ]
     elif hw.name == "qsv":
         cmd += ["-preset", preset, "-global_quality", str(crf)]

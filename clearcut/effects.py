@@ -54,13 +54,19 @@ def apply_punch_zoom(
     # Get input dimensions
     probe = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-select_streams", "v:0",
-            "-show_entries", "stream=width,height",
-            "-of", "json",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "json",
             str(input_path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     try:
         info = json.loads(probe.stdout)
@@ -69,9 +75,7 @@ def apply_punch_zoom(
     except (json.JSONDecodeError, KeyError, IndexError):
         raise EncodingError(f"Could not determine video dimensions: {input_path}")
 
-    console.print(
-        f"[cyan]Applying punch zoom ({zoom_in}x) on {input_path.name}[/cyan]"
-    )
+    console.print(f"[cyan]Applying punch zoom ({zoom_in}x) on {input_path.name}[/cyan]")
 
     # Crop center then scale back up = static zoom effect
     crop_w = int(w / zoom_in)
@@ -82,10 +86,14 @@ def apply_punch_zoom(
     vf = f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},scale={w}:{h}:flags=lanczos"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(input_path),
-        "-vf", vf,
-        "-c:a", "copy",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_path),
+        "-vf",
+        vf,
+        "-c:a",
+        "copy",
         str(output_path),
     ]
     subprocess.run(cmd, capture_output=True, check=True)
@@ -126,19 +134,23 @@ def add_hook_zoom(
         raise EncodingError("ffmpeg not found in PATH")
 
     console.print(
-        f"[cyan]Adding hook zoom ({zoom_amount}x for {hook_duration}s) "
-        f"on {input_path.name}[/cyan]"
+        f"[cyan]Adding hook zoom ({zoom_amount}x for {hook_duration}s) on {input_path.name}[/cyan]"
     )
 
     # Get total duration
     probe = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-show_entries", "format=duration",
-            "-of", "json",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
             str(input_path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     try:
         total_dur = float(json.loads(probe.stdout)["format"]["duration"])
@@ -152,13 +164,19 @@ def add_hook_zoom(
     # Get dimensions
     probe2 = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-select_streams", "v:0",
-            "-show_entries", "stream=width,height",
-            "-of", "json",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "json",
             str(input_path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     try:
         info = json.loads(probe2.stdout)
@@ -180,46 +198,60 @@ def add_hook_zoom(
 
         subprocess.run(
             [
-                "ffmpeg", "-y",
-                "-i", str(input_path),
-                "-t", str(hook_duration),
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(input_path),
+                "-t",
+                str(hook_duration),
                 "-vf",
-                f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},"
-                f"scale={w}:{h}:flags=lanczos",
-                "-c:a", "aac",
+                f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},scale={w}:{h}:flags=lanczos",
+                "-c:a",
+                "aac",
                 str(part1),
             ],
-            capture_output=True, check=True,
+            capture_output=True,
+            check=True,
         )
 
         # Part 2: rest of video, unzoomed
         subprocess.run(
             [
-                "ffmpeg", "-y",
-                "-i", str(input_path),
-                "-ss", str(hook_duration),
-                "-c", "copy",
-                "-avoid_negative_ts", "make_zero",
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(input_path),
+                "-ss",
+                str(hook_duration),
+                "-c",
+                "copy",
+                "-avoid_negative_ts",
+                "make_zero",
                 str(part2),
             ],
-            capture_output=True, check=True,
+            capture_output=True,
+            check=True,
         )
 
         # Concatenate (use absolute paths in concat file)
         concat_file = tmp / "concat.txt"
-        concat_file.write_text(
-            f"file '{part1}'\nfile '{part2}'\n"
-        )
+        concat_file.write_text(f"file '{part1}'\nfile '{part2}'\n")
         subprocess.run(
             [
-                "ffmpeg", "-y",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", str(concat_file),
-                "-c", "copy",
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_file),
+                "-c",
+                "copy",
                 str(output_path),
             ],
-            capture_output=True, check=True,
+            capture_output=True,
+            check=True,
         )
 
     console.print(f"[green]Hook zoom applied → {output_path}[/green]")
@@ -250,9 +282,7 @@ def parse_speed_segment(raw: str) -> SpeedSegment:
     """
     m = re.match(r"^([\d.]+)-([\d.]+):([\d.]+)$", raw.strip())
     if not m:
-        raise ConfigError(
-            f"Invalid speed segment '{raw}'. Expected format: start-end:multiplier"
-        )
+        raise ConfigError(f"Invalid speed segment '{raw}'. Expected format: start-end:multiplier")
     start, end, speed = float(m.group(1)), float(m.group(2)), float(m.group(3))
     if start >= end:
         raise ConfigError(f"Speed segment start ({start}) must be < end ({end})")
@@ -325,12 +355,17 @@ def apply_speed_segments(
     # Get total duration
     probe = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-show_entries", "format=duration",
-            "-of", "json",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
             str(input_path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     try:
         total_dur = float(json.loads(probe.stdout)["format"]["duration"])
@@ -350,15 +385,22 @@ def apply_speed_segments(
                 part = tmp / f"normal_{i}.mp4"
                 subprocess.run(
                     [
-                        "ffmpeg", "-y",
-                        "-i", str(input_path),
-                        "-ss", str(cursor),
-                        "-to", str(seg.start),
-                        "-c", "copy",
-                        "-avoid_negative_ts", "make_zero",
+                        "ffmpeg",
+                        "-y",
+                        "-i",
+                        str(input_path),
+                        "-ss",
+                        str(cursor),
+                        "-to",
+                        str(seg.start),
+                        "-c",
+                        "copy",
+                        "-avoid_negative_ts",
+                        "make_zero",
                         str(part),
                     ],
-                    capture_output=True, check=True,
+                    capture_output=True,
+                    check=True,
                 )
                 parts.append(part)
 
@@ -370,16 +412,24 @@ def apply_speed_segments(
 
             subprocess.run(
                 [
-                    "ffmpeg", "-y",
-                    "-i", str(input_path),
-                    "-ss", str(seg.start),
-                    "-to", str(seg.end),
-                    "-vf", vf,
-                    "-af", af,
-                    "-avoid_negative_ts", "make_zero",
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(input_path),
+                    "-ss",
+                    str(seg.start),
+                    "-to",
+                    str(seg.end),
+                    "-vf",
+                    vf,
+                    "-af",
+                    af,
+                    "-avoid_negative_ts",
+                    "make_zero",
                     str(part),
                 ],
-                capture_output=True, check=True,
+                capture_output=True,
+                check=True,
             )
             parts.append(part)
             cursor = seg.end
@@ -389,32 +439,42 @@ def apply_speed_segments(
             part = tmp / "normal_tail.mp4"
             subprocess.run(
                 [
-                    "ffmpeg", "-y",
-                    "-i", str(input_path),
-                    "-ss", str(cursor),
-                    "-c", "copy",
-                    "-avoid_negative_ts", "make_zero",
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(input_path),
+                    "-ss",
+                    str(cursor),
+                    "-c",
+                    "copy",
+                    "-avoid_negative_ts",
+                    "make_zero",
                     str(part),
                 ],
-                capture_output=True, check=True,
+                capture_output=True,
+                check=True,
             )
             parts.append(part)
 
         # Concatenate all parts
         concat_file = tmp / "concat.txt"
-        concat_file.write_text(
-            "\n".join(f"file '{p}'" for p in parts) + "\n"
-        )
+        concat_file.write_text("\n".join(f"file '{p}'" for p in parts) + "\n")
         subprocess.run(
             [
-                "ffmpeg", "-y",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", str(concat_file),
-                "-c", "copy",
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_file),
+                "-c",
+                "copy",
                 str(output_path),
             ],
-            capture_output=True, check=True,
+            capture_output=True,
+            check=True,
         )
 
     console.print(f"[green]Speed ramping applied → {output_path}[/green]")

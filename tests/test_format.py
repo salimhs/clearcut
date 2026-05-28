@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 class TestFormatMath:
     """Test the crop dimension math for format conversions.
 

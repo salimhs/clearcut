@@ -42,9 +42,7 @@ class TestHighlightClip:
         assert clip.virality_score == 0.85
 
     def test_duration(self) -> None:
-        clip = HighlightClip(
-            start=5.0, end=25.0, title="", reason="", virality_score=0.5
-        )
+        clip = HighlightClip(start=5.0, end=25.0, title="", reason="", virality_score=0.5)
         assert clip.end - clip.start == 20.0
 
 

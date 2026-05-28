@@ -50,8 +50,7 @@ def detect_gpu() -> GpuCapabilities:
             caps.cuda_device_name = torch.cuda.get_device_name(0)
             caps.gpu_enhanced = True
             caps.notes.append(
-                f"CUDA GPU: {caps.cuda_device_name} "
-                f"({caps.cuda_device_count} device(s))"
+                f"CUDA GPU: {caps.cuda_device_name} ({caps.cuda_device_count} device(s))"
             )
         else:
             caps.notes.append("PyTorch installed but no CUDA device detected")
@@ -60,7 +59,8 @@ def detect_gpu() -> GpuCapabilities:
     if shutil.which("ffmpeg"):
         result = subprocess.run(
             ["ffmpeg", "-hide_banner", "-encoders"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if "h264_nvenc" in result.stdout:
             caps.nvenc_available = True
@@ -99,9 +99,7 @@ def print_gpu_banner(caps: GpuCapabilities | None = None) -> None:
 
     # Detailed breakdown visible with context from other modules
     if caps.cuda_available:
-        console.print(
-            f"  [dim]ML acceleration: {caps.cuda_device_name}[/dim]"
-        )
+        console.print(f"  [dim]ML acceleration: {caps.cuda_device_name}[/dim]")
     if caps.nvenc_available:
         console.print(f"  [dim]Encode acceleration: {caps.nvenc_encoder}[/dim]")
 
@@ -160,9 +158,7 @@ def print_accelerated_features(caps: GpuCapabilities | None = None) -> None:
     # Summary
     if caps.gpu_enhanced:
         gpu_count = sum(1 for f in features if f["gpu_enabled"])
-        console.print(
-            f"\n[dim]{gpu_count}/{len(features)} features GPU-accelerated[/dim]"
-        )
+        console.print(f"\n[dim]{gpu_count}/{len(features)} features GPU-accelerated[/dim]")
     else:
         console.print(
             "\n[dim]Install PyTorch with CUDA or connect a GPU machine "

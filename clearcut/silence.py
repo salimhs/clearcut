@@ -31,8 +31,7 @@ def detect_audio_segments(input_path: Path, threshold: float = 0.5) -> list[Segm
         import torchaudio  # noqa: F401
     except ImportError:
         raise AudioError(
-            "Silero-VAD requires torch and torchaudio. "
-            "Install with: pip install clearcut[silence]"
+            "Silero-VAD requires torch and torchaudio. Install with: pip install clearcut[silence]"
         )
 
     model, utils = torch.hub.load(
@@ -93,12 +92,18 @@ def cut_silence(input_path: Path, segments: list[Segment], output_path: Path) ->
         for i, (start, end) in enumerate(padded):
             seg_path = tmpdir_path / f"seg_{i:04d}.ts"
             cmd = [
-                "ffmpeg", "-y",
-                "-i", str(input_path),
-                "-ss", f"{start:.3f}",
-                "-to", f"{end:.3f}",
-                "-c", "copy",
-                "-avoid_negative_ts", "make_zero",
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(input_path),
+                "-ss",
+                f"{start:.3f}",
+                "-to",
+                f"{end:.3f}",
+                "-c",
+                "copy",
+                "-avoid_negative_ts",
+                "make_zero",
                 seg_path.name,
             ]
             subprocess.run(
@@ -110,17 +115,21 @@ def cut_silence(input_path: Path, segments: list[Segment], output_path: Path) ->
             segment_files.append(seg_path)
 
         concat_list = tmpdir_path / "concat.txt"
-        concat_list.write_text(
-            "\n".join(f"file '{seg.name}'" for seg in segment_files)
-        )
+        concat_list.write_text("\n".join(f"file '{seg.name}'" for seg in segment_files))
 
         cmd = [
-            "ffmpeg", "-y",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", str(concat_list),
-            "-c", "copy",
-            "-movflags", "+faststart",
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_list),
+            "-c",
+            "copy",
+            "-movflags",
+            "+faststart",
             str(output_path),
         ]
         subprocess.run(cmd, capture_output=True, check=True)
@@ -136,7 +145,8 @@ def _remove_silence_auto_editor(input_path: Path, output_path: Path) -> Path:
         "auto-editor",
         str(input_path),
         "--no-open",
-        "--output", str(output_path),
+        "--output",
+        str(output_path),
     ]
     subprocess.run(cmd, check=True)
     return output_path

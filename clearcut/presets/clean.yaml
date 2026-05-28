@@ -1,0 +1,11 @@
+name: clean
+description: Clean, minimalist preset — no effects, 16:9 landscape
+format: "16:9"
+transition: fade
+transition_duration: 0.3
+audio_target_lufs: -14.0
+brightness: 0.0
+contrast: 1.0
+saturation: 1.0
+silence_method: vad
+style: default

@@ -11,6 +11,7 @@ from rich.console import Console
 
 
 from clearcut import __version__
+
 log = logging.getLogger(__name__)
 
 app = typer.Typer(
@@ -196,7 +197,10 @@ def process(
     ] = None,
     watermark_position: Annotated[
         str,
-        typer.Option("--watermark-position", help="Watermark position (bottom-right/bottom-left/top-right/top-left)"),
+        typer.Option(
+            "--watermark-position",
+            help="Watermark position (bottom-right/bottom-left/top-right/top-left)",
+        ),
     ] = "bottom-right",
     watermark_scale: Annotated[
         float,
@@ -229,6 +233,16 @@ def process(
     config: Annotated[
         Optional[Path],
         typer.Option("--config", help="YAML config file (CLI args override config values)"),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Validate inputs and show pipeline stages without executing"
+        ),
+    ] = False,
+    plugin: Annotated[
+        Optional[list[Path]],
+        typer.Option("--plugin", help="Plugin Python files to load (repeatable)"),
     ] = None,
 ) -> None:
     """Process raw footage into a publish-ready video."""
@@ -301,7 +315,27 @@ def process(
         music_volume=_pick(music_volume, "music_volume", 0.3),  # type: ignore[arg-type]
     )
 
-    pipeline = Pipeline(config_obj)
+    # Dry-run mode
+    if dry_run:
+        from clearcut.dryrun import describe_stages, validate_inputs
+
+        errors = validate_inputs(config_obj)
+        describe_stages(config_obj)
+        if errors:
+            console.print("\n[red]Issues found — fix before running:[/red]")
+            for e in errors:
+                console.print(f"  [red]✗[/red] {e}")
+        return
+
+    # Load plugins
+    from clearcut.plugins import discover_plugins
+
+    loaded_plugins = discover_plugins(plugin or [])
+    if loaded_plugins:
+        for p in loaded_plugins:
+            console.print(f"  [green]Loaded plugin:[/green] {p['name']} ({p['path']})")
+
+    pipeline = Pipeline(config_obj, plugins=loaded_plugins)
     try:
         pipeline.run()
     finally:
@@ -408,6 +442,10 @@ def repurpose(
         str,
         typer.Option("--model", help="Claude model (sonnet/opus/haiku)"),
     ] = "sonnet",
+    llm_provider: Annotated[
+        str,
+        typer.Option("--llm-provider", help="LLM provider (claude)"),
+    ] = "claude",
     captions: Annotated[bool, typer.Option("--captions")] = True,
     burn: Annotated[bool, typer.Option("--burn")] = True,
     style: Annotated[str, typer.Option("--style")] = "default",
@@ -426,6 +464,7 @@ def repurpose(
         generate_captions=captions,
         burn_captions=burn,
         style=style,
+        llm_provider=llm_provider,
     )
     if template is None:
         kwargs.pop("template", None)
@@ -443,7 +482,9 @@ def repurpose(
 
 @app.command()
 def remote(
-    input: Annotated[Path, typer.Option("--input", "-i", help="Input video file to process on remote GPU")],
+    input: Annotated[
+        Path, typer.Option("--input", "-i", help="Input video file to process on remote GPU")
+    ],
     output: Annotated[Path, typer.Option("--output", "-o", help="Output file path")],
     host: Annotated[
         str,
@@ -453,7 +494,9 @@ def remote(
         Optional[str],
         typer.Option("--user", "-u", help="SSH username for remote machine"),
     ] = None,
-    captions: Annotated[bool, typer.Option("--captions", help="Generate captions (requires GPU)")] = False,
+    captions: Annotated[
+        bool, typer.Option("--captions", help="Generate captions (requires GPU)")
+    ] = False,
     template: Annotated[
         Optional[str],
         typer.Option("--template", help="Template preset (clean/tiktok/cinematic/bold)"),
@@ -600,6 +643,91 @@ def info() -> None:
 
     if shutil.which("ffprobe"):
         console.print("[green]✓[/green] ffprobe installed")
+
+
+@app.command()
+def metadata(
+    input: Annotated[Path, typer.Option("--input", "-i", help="Video file to analyze")],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Output metadata as JSON"),
+    ] = False,
+) -> None:
+    """Show metadata for a video file using ffprobe."""
+    from clearcut.metadata import (
+        extract_metadata,
+        format_metadata_json,
+        print_metadata,
+    )
+
+    if not input.exists():
+        console.print(f"[red]File not found: {input}[/red]")
+        raise typer.Exit(1)
+
+    import shutil
+
+    if not shutil.which("ffprobe"):
+        console.print("[red]ffprobe not found — install ffmpeg to use this command[/red]")
+        raise typer.Exit(1)
+
+    meta = extract_metadata(input)
+
+    if json_output:
+        console.print(format_metadata_json(meta))
+    else:
+        print_metadata(meta)
+
+
+@app.command()
+def preview(
+    input: Annotated[Path, typer.Option("--input", "-i", help="Video file to preview")],
+) -> None:
+    """Preview a video file in ffplay."""
+    import shutil
+
+    from clearcut.preview import preview_video
+
+    if not input.exists():
+        console.print(f"[red]File not found: {input}[/red]")
+        raise typer.Exit(1)
+    if not shutil.which("ffplay"):
+        console.print("[red]ffplay not found — install ffmpeg[/red]")
+        raise typer.Exit(1)
+
+    preview_video(input)
+
+
+@app.command()
+def web() -> None:
+    """Launch the ClearCut web interface."""
+    from clearcut.web.app import launch
+
+    launch()
+
+
+@app.command()
+def upload(
+    input: Annotated[Path, typer.Option("--input", "-i", help="Video file to upload")],
+    platform: Annotated[
+        str, typer.Option("--platform", "-p", help="Platform: tiktok or youtube")
+    ] = "tiktok",
+) -> None:
+    """Stub: prepare a video for social media upload."""
+    from clearcut.social import upload_tiktok, upload_youtube
+
+    if not input.exists():
+        console.print(f"[red]File not found: {input}[/red]")
+        raise typer.Exit(1)
+
+    if platform == "tiktok":
+        result = upload_tiktok(input)
+    elif platform == "youtube":
+        result = upload_youtube(input)
+    else:
+        console.print(f"[red]Unknown platform: {platform}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[yellow]{result['message']}[/yellow]")
 
 
 if __name__ == "__main__":

@@ -16,12 +16,7 @@ class TestValidateCubeFile:
 
     def test_valid_cube_file(self, tmp_path: Path) -> None:
         cube = tmp_path / "test.cube"
-        cube.write_text(
-            "# Created by test\n"
-            "LUT_3D_SIZE 33\n"
-            "0.0 0.0 0.0\n"
-            "1.0 1.0 1.0\n"
-        )
+        cube.write_text("# Created by test\nLUT_3D_SIZE 33\n0.0 0.0 0.0\n1.0 1.0 1.0\n")
         assert _validate_cube_file(cube) is True
 
     def test_no_header(self, tmp_path: Path) -> None:

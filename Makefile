@@ -1,4 +1,4 @@
-.PHONY: install dev test clean demo lint
+.PHONY: install dev test clean demo lint docs-serve docs-build
 
 install:
 	pip install .
@@ -20,6 +20,12 @@ clean:
 	rm -rf build/ dist/ *.egg-info .pytest_cache __pycache__
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+docs-serve:
+	mkdocs serve
+
+docs-build:
+	mkdocs build
 
 demo:
 	@echo "Usage: clearcut process --main input.mp4 --output final.mp4"

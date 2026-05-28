@@ -13,6 +13,7 @@ from rich.console import Console
 
 from clearcut.models import PipelineConfig
 from clearcut.styles import get_style
+
 log = logging.getLogger(__name__)
 
 console = Console()
@@ -99,13 +100,18 @@ class Pipeline:
             current = self._stage_normalize_audio(current)
 
         # Stage 2b: Music ducking (optional)
-        if (self.config.duck_music or self.config.background_music) and not self._check_interrupted():
+        if (
+            self.config.duck_music or self.config.background_music
+        ) and not self._check_interrupted():
             current = self._stage_duck_music(current)
 
         # Stage 3: Compositing
-        if (self.config.context or self.config.images or self.config.assets
-                or self.config.watermark_path) \
-                and not self._check_interrupted():
+        if (
+            self.config.context
+            or self.config.images
+            or self.config.assets
+            or self.config.watermark_path
+        ) and not self._check_interrupted():
             current = self._stage_composite(current)
 
         # Stage 4: Colour grading — LUT and/or basic correction
@@ -159,7 +165,8 @@ class Pipeline:
         with stage_progress("Detecting speech segments...") as progress:
             task = progress.add_task("Detecting speech segments...", total=None)
             remove_silence(
-                input_path, output,
+                input_path,
+                output,
                 method=self.config.silence_method,
             )
             progress.update(task, description="Silence removal complete")
@@ -182,7 +189,9 @@ class Pipeline:
 
         seg_dir = self.workdir / "scenes"
         segments = split_at_boundaries(
-            input_path, boundaries, seg_dir,
+            input_path,
+            boundaries,
+            seg_dir,
             max_clip_duration=self.config.max_clip_duration,
         )
 
@@ -201,7 +210,8 @@ class Pipeline:
         with stage_progress("Normalizing audio...") as progress:
             task = progress.add_task("Normalizing audio...", total=None)
             normalize_audio(
-                input_path, output,
+                input_path,
+                output,
                 target_lufs=self.config.audio_target_lufs,
             )
             progress.update(task, description="Audio normalization complete")
@@ -236,27 +246,33 @@ class Pipeline:
 
         overlays = []
         for i, img_path in enumerate(self.config.images):
-            overlays.append(ImageOverlay(
-                image_path=img_path,
-                seconds=i * 5.0,
-                duration=5.0,
-            ))
+            overlays.append(
+                ImageOverlay(
+                    image_path=img_path,
+                    seconds=i * 5.0,
+                    duration=5.0,
+                )
+            )
         for asset in self.config.assets:
-            overlays.append(ImageOverlay(
-                image_path=asset.path,
-                seconds=asset.seconds,
-                duration=5.0,
-            ))
+            overlays.append(
+                ImageOverlay(
+                    image_path=asset.path,
+                    seconds=asset.seconds,
+                    duration=5.0,
+                )
+            )
         if self.config.watermark_path:
-            overlays.append(ImageOverlay(
-                image_path=self.config.watermark_path,
-                seconds=0,
-                duration=0,  # ignored for watermarks
-                position=self.config.watermark_position,
-                scale=self.config.watermark_scale,
-                opacity=self.config.watermark_opacity,
-                is_watermark=True,
-            ))
+            overlays.append(
+                ImageOverlay(
+                    image_path=self.config.watermark_path,
+                    seconds=0,
+                    duration=0,  # ignored for watermarks
+                    position=self.config.watermark_position,
+                    scale=self.config.watermark_scale,
+                    opacity=self.config.watermark_opacity,
+                    is_watermark=True,
+                )
+            )
 
         with stage_progress("Compositing layers...") as progress:
             task = progress.add_task("Compositing layers...", total=None)
@@ -322,7 +338,8 @@ class Pipeline:
             console.print("\n[bold]Stage 4b:[/bold] Colour correction")
             output = self.workdir / "04b_corrected.mp4"
             basic_correct(
-                current, output,
+                current,
+                output,
                 brightness=brightness,
                 contrast=contrast,
                 saturation=saturation,
@@ -337,8 +354,7 @@ class Pipeline:
 
         crop_method = self.config.smart_crop
         console.print(
-            f"\n[bold]Stage 5:[/bold] Format conversion → {self.config.format}"
-            f" (crop={crop_method})"
+            f"\n[bold]Stage 5:[/bold] Format conversion → {self.config.format} (crop={crop_method})"
         )
         output = self.workdir / "05_formatted.mp4"
 
@@ -350,9 +366,7 @@ class Pipeline:
         elif fmt == "16:9":
             to_landscape(input_path, output)
         else:
-            console.print(
-                f"[yellow]Unknown format '{fmt}' — skipping conversion[/yellow]"
-            )
+            console.print(f"[yellow]Unknown format '{fmt}' — skipping conversion[/yellow]")
             return input_path
 
         return output
@@ -450,7 +464,8 @@ class Pipeline:
         with stage_progress("Encoding...") as progress:
             task = progress.add_task("Encoding...", total=None)
             encode(
-                input_path, output,
+                input_path,
+                output,
                 preset=self.config.encoder_preset,
                 hardware=self.config.hardware,
             )

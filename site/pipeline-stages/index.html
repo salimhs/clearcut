@@ -1,0 +1,1246 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Raw footage to publish-ready video. One command.">
+      
+      
+      
+        <link rel="canonical" href="https://salimhs.github.io/clearcut/pipeline-stages/">
+      
+      
+        <link rel="prev" href="../cli-reference/">
+      
+      
+        <link rel="next" href="../templates/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Pipeline Stages - ClearCut</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pipeline-stages" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ClearCut" class="md-header__button md-logo" aria-label="ClearCut" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ClearCut
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Pipeline Stages
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/salimhs/clearcut" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    salimhs/clearcut
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../quickstart/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quick Start
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../cli-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Pipeline Stages
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../templates/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Templates
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Configuration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../remote-gpu/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Remote GPU
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ClearCut" class="md-nav__button md-logo" aria-label="ClearCut" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ClearCut
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/salimhs/clearcut" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    salimhs/clearcut
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Stages
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Stages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#stage-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why This Order?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why This Order?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-silence-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1: Silence Removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-1b-scene-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1b: Scene Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-audio-normalization-ducking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 2: Audio Normalization + Ducking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-3-compositing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 3: Compositing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-4-colour-grading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 4: Colour Grading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-5-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 5: Format Conversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-6-captions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 6: Captions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-7-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 7: Effects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-7b-speed-ramping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 7b: Speed Ramping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-8-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 8: Transitions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-9-final-encode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 9: Final Encode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remote-gpu/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote GPU
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#stage-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why This Order?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why This Order?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-silence-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1: Silence Removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-1b-scene-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1b: Scene Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-audio-normalization-ducking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 2: Audio Normalization + Ducking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-3-compositing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 3: Compositing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-4-colour-grading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 4: Colour Grading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-5-format-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 5: Format Conversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-6-captions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 6: Captions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-7-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 7: Effects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-7b-speed-ramping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 7b: Speed Ramping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-8-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 8: Transitions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-9-final-encode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 9: Final Encode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="pipeline-stages">Pipeline Stages<a class="headerlink" href="#pipeline-stages" title="Permanent link">&para;</a></h1>
+<p>ClearCut's pipeline processes raw footage through up to 10 stages in a carefully designed order. Each stage's position is intentional — reordering them would break downstream processing.</p>
+<h2 id="stage-order">Stage Order<a class="headerlink" href="#stage-order" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code> 1. Silence removal
+ 2. Scene detection (optional)
+ 3. Audio normalization + ducking
+ 4. Compositing (PiP, image overlays)
+ 5. Colour grading (LUT + basic correction)
+ 6. Format conversion (9:16, 1:1, etc.)
+ 7. Caption generation + burn-in
+ 8. Effects (punch zoom, hook zoom)
+ 9. Speed ramping
+10. Transitions between segments
+11. Final encode (hardware-accelerated)
+</code></pre></div>
+<h2 id="why-this-order">Why This Order?<a class="headerlink" href="#why-this-order" title="Permanent link">&para;</a></h2>
+<h3 id="stage-1-silence-removal">Stage 1: Silence Removal<a class="headerlink" href="#stage-1-silence-removal" title="Permanent link">&para;</a></h3>
+<p>Silence removal <strong>must come first</strong> because it changes the video duration. Speech segments are spliced together with smooth jump cuts, which means every timestamp after this stage may differ from the original. Running silence removal later would require re-syncing any timestamped assets — so we do it immediately.</p>
+<h3 id="stage-1b-scene-detection">Stage 1b: Scene Detection<a class="headerlink" href="#stage-1b-scene-detection" title="Permanent link">&para;</a></h3>
+<p>Scene boundaries are detected <strong>after</strong> silence removal so that scene transitions align with actual content boundaries rather than silence gaps. Each detected scene becomes a segment that can have its own transition.</p>
+<h3 id="stage-2-audio-normalization-ducking">Stage 2: Audio Normalization + Ducking<a class="headerlink" href="#stage-2-audio-normalization-ducking" title="Permanent link">&para;</a></h3>
+<p>Audio is normalized <strong>before</strong> compositing because:</p>
+<ul>
+<li>Audio processing doesn't depend on video composition</li>
+<li>Normalized audio provides a consistent level for voice/music mixing</li>
+<li>Ducking (auto-lowering background music during speech) is easier with a normalized voice track</li>
+</ul>
+<h3 id="stage-3-compositing">Stage 3: Compositing<a class="headerlink" href="#stage-3-compositing" title="Permanent link">&para;</a></h3>
+<p>PiP overlays, image insertions, and watermarks are applied <strong>after</strong> silence removal and audio processing because:</p>
+<ul>
+<li>Compositing creates a new video stream from layers</li>
+<li>We want the shortest possible video (post-silence removal) for compositing</li>
+<li>Timestamped image assets (<code>--assets diagram@30</code>) reference the post-silence timeline</li>
+</ul>
+<h3 id="stage-4-colour-grading">Stage 4: Colour Grading<a class="headerlink" href="#stage-4-colour-grading" title="Permanent link">&para;</a></h3>
+<p>Colour correction is applied <strong>before</strong> format conversion and captions because:</p>
+<ul>
+<li>LUT application and colour correction are resolution-independent</li>
+<li>Doing it early means captions and effects work on the final colour-graded image</li>
+<li>Better to grade once and have everything downstream inherit the correct look</li>
+</ul>
+<h3 id="stage-5-format-conversion">Stage 5: Format Conversion<a class="headerlink" href="#stage-5-format-conversion" title="Permanent link">&para;</a></h3>
+<p>Format conversion (e.g., 9:16 vertical, 1:1 square) is placed <strong>before captions</strong> — this is critical.</p>
+<div class="admonition important">
+<p class="admonition-title">Why Format Before Captions</p>
+<p>ASS subtitle positioning uses pixel coordinates. If we burned captions into a 16:9 video and <em>then</em> cropped to 9:16, the caption text would be off-screen or mispositioned. By converting format first, ASS coordinates map correctly to the final frame dimensions.</p>
+</div>
+<h3 id="stage-6-captions">Stage 6: Captions<a class="headerlink" href="#stage-6-captions" title="Permanent link">&para;</a></h3>
+<p>Caption generation + burn-in happens <strong>after format conversion</strong> so that:</p>
+<ul>
+<li>ASS positioning coordinates match the final video dimensions</li>
+<li>Word-level highlight animations render at the correct resolution</li>
+<li>No need to re-burn captions if format changes</li>
+</ul>
+<h3 id="stage-7-effects">Stage 7: Effects<a class="headerlink" href="#stage-7-effects" title="Permanent link">&para;</a></h3>
+<p>Effects (punch zoom, hook zoom) come <strong>after captions</strong> so that:</p>
+<ul>
+<li>Zooming/dynamic effects don't break caption text positioning</li>
+<li>If we zoomed first, the caption content area would shift unpredictably</li>
+<li>The zoom effect <em>includes</em> the captions, giving a more integrated look</li>
+</ul>
+<h3 id="stage-7b-speed-ramping">Stage 7b: Speed Ramping<a class="headerlink" href="#stage-7b-speed-ramping" title="Permanent link">&para;</a></h3>
+<p>Variable-speed segments (speed up/slow down) come after effects so that:</p>
+<ul>
+<li>Speed changes apply to the final composited + captioned video</li>
+<li>The zoom effect timeline isn't distorted by speed changes</li>
+<li>Speed ramps affect the complete frame including captions</li>
+</ul>
+<h3 id="stage-8-transitions">Stage 8: Transitions<a class="headerlink" href="#stage-8-transitions" title="Permanent link">&para;</a></h3>
+<p>Transitions between segments (fade, wipe, dissolve) come near the end because:</p>
+<ul>
+<li>All individual segments have been fully processed (silence removed, graded, captioned, effects applied)</li>
+<li>Transitions only need to blend the final processed clips</li>
+<li>Doing transitions earlier would require re-processing on each segment</li>
+</ul>
+<h3 id="stage-9-final-encode">Stage 9: Final Encode<a class="headerlink" href="#stage-9-final-encode" title="Permanent link">&para;</a></h3>
+<p>The encode stage is always last. It takes the fully processed video and compresses it with the selected hardware encoder (NVENC, AMF, QSV) or software x264, using the chosen quality/speed preset.</p>
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Why It's Here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Silence removal</td>
+<td>Changes duration — everything after references this timeline</td>
+</tr>
+<tr>
+<td>1b. Scene detection</td>
+<td>Split at content boundaries, not silence gaps</td>
+</tr>
+<tr>
+<td>2. Audio normalization</td>
+<td>Independent of video; consistent level for mixing</td>
+</tr>
+<tr>
+<td>3. Compositing</td>
+<td>Works on shortest possible timeline</td>
+</tr>
+<tr>
+<td>4. Colour grading</td>
+<td>Resolution-independent; downstream inherits the look</td>
+</tr>
+<tr>
+<td>5. Format conversion</td>
+<td><strong>Must be before captions</strong> for correct ASS coordinates</td>
+</tr>
+<tr>
+<td>6. Captions</td>
+<td>ASS positions match final dimensions</td>
+</tr>
+<tr>
+<td>7. Effects</td>
+<td>Zoom after captions = captions stay positioned correctly</td>
+</tr>
+<tr>
+<td>7b. Speed ramps</td>
+<td>Speed after effects = zoom timeline is preserved</td>
+</tr>
+<tr>
+<td>8. Transitions</td>
+<td>Blend fully-processed segments</td>
+</tr>
+<tr>
+<td>9. Final encode</td>
+<td>Compress the complete, polished output</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

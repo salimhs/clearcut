@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 class TestPunchZoomMath:
     """Test the crop/scale dimension calculations for punch zoom.
 

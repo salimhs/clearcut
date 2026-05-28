@@ -15,6 +15,7 @@ from rich.console import Console
 
 from clearcut.exceptions import AudioError, FileError
 from clearcut.utils import has_audio
+
 log = logging.getLogger(__name__)
 
 console = Console()
@@ -47,14 +48,19 @@ def detect_audio(input_path: Path) -> dict:
 
     result = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-select_streams", "a:0",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "a:0",
             "-show_entries",
             "stream=codec_name,channels,sample_rate,bit_rate",
-            "-of", "json",
+            "-of",
+            "json",
             str(input_path),
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 
     try:
@@ -111,20 +117,19 @@ def normalize_audio(
         shutil.copy2(input_path, output_path)
         return output_path
 
-    console.print(
-        f"[cyan]Normalizing audio → {target_lufs} LUFS, "
-        f"TP {true_peak} dBTP[/cyan]"
-    )
+    console.print(f"[cyan]Normalizing audio → {target_lufs} LUFS, TP {true_peak} dBTP[/cyan]")
 
     # Pass 1: measure current loudness
     measure_cmd = [
-        "ffmpeg", "-y",
-        "-i", str(input_path),
-        "-af", (
-            f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11"
-            ":print_format=json"
-        ),
-        "-f", "null", "-",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_path),
+        "-af",
+        (f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11:print_format=json"),
+        "-f",
+        "null",
+        "-",
     ]
     measure = subprocess.run(measure_cmd, capture_output=True, text=True)
 
@@ -176,12 +181,18 @@ def normalize_audio(
         loudnorm_filter = f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(input_path),
-        "-af", loudnorm_filter,
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-b:a", "192k",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(input_path),
+        "-af",
+        loudnorm_filter,
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
         str(output_path),
     ]
     subprocess.run(cmd, check=True, capture_output=True)
@@ -232,10 +243,7 @@ def add_ducking(
         shutil.copy2(video_path, output_path)
         return output_path
 
-    console.print(
-        f"[cyan]Adding ducked music ({duck_db} dB, "
-        f"release {release}s)[/cyan]"
-    )
+    console.print(f"[cyan]Adding ducked music ({duck_db} dB, release {release}s)[/cyan]")
 
     # Convert release from seconds to milliseconds for ffmpeg
     release_ms = int(release * 1000)
@@ -249,15 +257,24 @@ def add_ducking(
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video_path),
-        "-i", str(music_path),
-        "-filter_complex", filter_complex,
-        "-map", "0:v",
-        "-map", "[out]",
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-b:a", "192k",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_path),
+        "-i",
+        str(music_path),
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "0:v",
+        "-map",
+        "[out]",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
         "-shortest",
         str(output_path),
     ]

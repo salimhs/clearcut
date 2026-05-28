@@ -1,0 +1,34 @@
+site_name: ClearCut
+site_description: Raw footage to publish-ready video. One command.
+site_url: https://salimhs.github.io/clearcut/
+repo_url: https://github.com/salimhs/clearcut
+repo_name: salimhs/clearcut
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - admonition
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick Start: quickstart.md
+  - CLI Reference: cli-reference.md
+  - Pipeline Stages: pipeline-stages.md
+  - Templates: templates.md
+  - Configuration: configuration.md
+  - Remote GPU: remote-gpu.md
+  - FAQ: faq.md

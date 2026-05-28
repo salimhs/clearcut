@@ -38,8 +38,7 @@ def detect_faces_in_frames(
         import numpy as np  # noqa: F401 — needed by cv2 at runtime
     except ImportError:
         console.print(
-            "[yellow]opencv-python-headless not available — "
-            "falling back to center crop[/yellow]"
+            "[yellow]opencv-python-headless not available — falling back to center crop[/yellow]"
         )
         return []
 

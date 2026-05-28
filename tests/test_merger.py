@@ -58,7 +58,9 @@ def test_merge_missing_clip(tmp_path: Path):
 @patch("clearcut.transitions.apply_transitions")
 @patch("clearcut.audio.normalize_audio")
 @patch("clearcut.utils.has_audio", return_value=True)
-def test_merge_two_clips(mock_has_audio, mock_normalize, mock_transitions, mock_encode, tmp_path: Path):
+def test_merge_two_clips(
+    mock_has_audio, mock_normalize, mock_transitions, mock_encode, tmp_path: Path
+):
     """Merge of two clips calls normalize → transitions → encode."""
     clip1 = tmp_path / "clip1.mp4"
     clip2 = tmp_path / "clip2.mp4"
@@ -70,18 +72,21 @@ def test_merge_two_clips(mock_has_audio, mock_normalize, mock_transitions, mock_
     def fake_normalize(inp, out, **kw):
         out.write_bytes(b"\x00" * 100)
         return out
+
     mock_normalize.side_effect = fake_normalize
 
     # Make transitions create the output file
     def fake_transitions(segs, out, **kw):
         out.write_bytes(b"\x00" * 100)
         return out
+
     mock_transitions.side_effect = fake_transitions
 
     # Make encode create the output file
     def fake_encode(inp, out, **kw):
         out.write_bytes(b"\x00" * 100)
         return out
+
     mock_encode.side_effect = fake_encode
 
     merge_clips([clip1, clip2], output)
@@ -103,6 +108,7 @@ def test_merge_single_clip_no_audio(mock_has_audio, mock_normalize, mock_encode,
     def fake_encode(inp, out, **kw):
         out.write_bytes(b"\x00" * 100)
         return out
+
     mock_encode.side_effect = fake_encode
 
     merge_clips([clip], output)
@@ -115,7 +121,9 @@ def test_merge_single_clip_no_audio(mock_has_audio, mock_normalize, mock_encode,
 @patch("clearcut.transitions.apply_transitions")
 @patch("clearcut.audio.normalize_audio")
 @patch("clearcut.utils.has_audio", return_value=True)
-def test_merge_passes_transition_params(mock_has_audio, mock_normalize, mock_transitions, mock_encode, tmp_path: Path):
+def test_merge_passes_transition_params(
+    mock_has_audio, mock_normalize, mock_transitions, mock_encode, tmp_path: Path
+):
     """Transition type and duration are forwarded."""
     clips = []
     for i in range(3):
@@ -126,16 +134,19 @@ def test_merge_passes_transition_params(mock_has_audio, mock_normalize, mock_tra
     def fake_normalize(inp, out, **kw):
         out.write_bytes(b"\x00" * 100)
         return out
+
     mock_normalize.side_effect = fake_normalize
 
     def fake_transitions(segs, out, **kw):
         out.write_bytes(b"\x00" * 100)
         return out
+
     mock_transitions.side_effect = fake_transitions
 
     def fake_encode(inp, out, **kw):
         out.write_bytes(b"\x00" * 100)
         return out
+
     mock_encode.side_effect = fake_encode
 
     merge_clips(

@@ -43,6 +43,7 @@ class TestSplitAtBoundaries:
     def test_ffmpeg_not_installed_raises(self, tmp_path: Path, mocker) -> None:
         from clearcut.scenes import split_at_boundaries
         from clearcut.exceptions import EncodingError
+
         mocker.patch("clearcut.scenes.shutil.which", return_value=None)
         with pytest.raises(EncodingError, match="ffmpeg"):
             split_at_boundaries(Path("/dev/null"), [], tmp_path / "out")

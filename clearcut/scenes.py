@@ -103,12 +103,17 @@ def split_at_boundaries(
 
         probe = subprocess.run(
             [
-                "ffprobe", "-v", "quiet",
-                "-show_entries", "format=duration",
-                "-of", "json",
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "json",
                 str(video_path),
             ],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         try:
             total_dur = float(json.loads(probe.stdout)["format"]["duration"])
@@ -137,17 +142,24 @@ def split_at_boundaries(
     for i, start in enumerate(starts):
         seg_path = output_dir / f"scene_{i:04d}.mp4"
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(video_path),
-            "-ss", str(start),
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-ss",
+            str(start),
         ]
         if i < len(all_splits):
             cmd.extend(["-to", str(all_splits[i])])
-        cmd.extend([
-            "-c", "copy",
-            "-avoid_negative_ts", "make_zero",
-            str(seg_path),
-        ])
+        cmd.extend(
+            [
+                "-c",
+                "copy",
+                "-avoid_negative_ts",
+                "make_zero",
+                str(seg_path),
+            ]
+        )
         subprocess.run(cmd, capture_output=True, check=True)
         segments.append(seg_path)
 

@@ -1,0 +1,11 @@
+name: tiktok
+description: Vertical TikTok/short-form content preset
+format: "9:16"
+transition: slideleft
+transition_duration: 0.2
+audio_target_lufs: -14.0
+brightness: 0.0
+contrast: 1.1
+saturation: 1.2
+silence_method: vad
+style: bold

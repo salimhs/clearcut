@@ -62,8 +62,7 @@ class RemoteGpuConfig:
             cmd += ["-p", str(self.port)]
         if self.ssh_key:
             cmd += ["-i", str(self.ssh_key)]
-        cmd += ["-o", "StrictHostKeyChecking=accept-new",
-                "-o", "ConnectTimeout=10"]
+        cmd += ["-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10"]
         cmd.append(self.ssh_host)
         return cmd
 
@@ -74,8 +73,7 @@ class RemoteGpuConfig:
             cmd += ["-P", str(self.port)]
         if self.ssh_key:
             cmd += ["-i", str(self.ssh_key)]
-        cmd += ["-o", "StrictHostKeyChecking=accept-new",
-                "-o", "ConnectTimeout=10"]
+        cmd += ["-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10"]
         return cmd
 
 
@@ -93,9 +91,7 @@ def _run_ssh(config: RemoteGpuConfig, command: str, desc: str = "") -> str:
 
     if result.returncode != 0:
         error_msg = result.stderr.strip() or result.stdout.strip() or "unknown error"
-        raise RemoteGpuError(
-            f"Remote command failed (exit {result.returncode}): {error_msg}"
-        )
+        raise RemoteGpuError(f"Remote command failed (exit {result.returncode}): {error_msg}")
 
     return result.stdout.strip()
 
@@ -159,8 +155,7 @@ def check_remote_capabilities(config: RemoteGpuConfig) -> dict:
 
     try:
         caps["clearcut_installed"] = (
-                _run_ssh(config, "pip show clearcut 2>/dev/null && echo YES || echo NO")
-                == "YES"
+            _run_ssh(config, "pip show clearcut 2>/dev/null && echo YES || echo NO") == "YES"
         )
     except RemoteGpuError:
         caps["clearcut_installed"] = False
@@ -231,7 +226,7 @@ def remote_pipeline(
     # 2. Create remote temp dir
     remote_dir = _run_ssh(
         config,
-        'mktemp -d /tmp/clearcut_gpu_XXXXXX',
+        "mktemp -d /tmp/clearcut_gpu_XXXXXX",
         desc="Creating remote workspace",
     )
     remote_input = f"{remote_dir}/{input_path.name}"
@@ -260,11 +255,17 @@ def remote_pipeline(
 
         # 4. Build remote pipeline command
         cmd_parts = [
-            "cd", remote_dir, "&&",
-            "clearcut", "process",
-            "--main", remote_input,
-            "--output", remote_output,
-            "--hardware", "nvenc",  # Force GPU encoding
+            "cd",
+            remote_dir,
+            "&&",
+            "clearcut",
+            "process",
+            "--main",
+            remote_input,
+            "--output",
+            remote_output,
+            "--hardware",
+            "nvenc",  # Force GPU encoding
         ]
 
         if not remove_silence:

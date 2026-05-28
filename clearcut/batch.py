@@ -76,8 +76,7 @@ def run_batch(config: BatchConfig) -> list[str]:
         return []
 
     console.print(
-        f"[cyan]Processing {len(to_process)} file(s) "
-        f"with {config.max_workers} worker(s)[/cyan]"
+        f"[cyan]Processing {len(to_process)} file(s) with {config.max_workers} worker(s)[/cyan]"
     )
 
     if config.dry_run:
@@ -98,8 +97,7 @@ def run_batch(config: BatchConfig) -> list[str]:
     else:
         with ProcessPoolExecutor(max_workers=config.max_workers) as executor:
             futures = {
-                executor.submit(_process_single, inp, out): inp.name
-                for inp, out in to_process
+                executor.submit(_process_single, inp, out): inp.name for inp, out in to_process
             }
             for future in as_completed(futures):
                 name = futures[future]
