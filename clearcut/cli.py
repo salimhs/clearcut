@@ -187,8 +187,11 @@ def process(
         typer.Option("--hook-zoom/--no-hook-zoom", help="Quick zoom on first 2 seconds"),
     ] = False,
     speed_segments: Annotated[
-        Optional[list[str]],
-        typer.Option("--speed-segments", help="Speed ramp segments (start-end:multiplier)"),
+        Optional[str],
+        typer.Option(
+            "--speed-segments",
+            help="Speed ramp segments (comma-separated, e.g. '0-10:2.0,10-20:0.5')",
+        ),
     ] = None,
     # --- Watermark ---
     watermark: Annotated[
@@ -240,10 +243,6 @@ def process(
             "--dry-run", help="Validate inputs and show pipeline stages without executing"
         ),
     ] = False,
-    plugin: Annotated[
-        Optional[list[Path]],
-        typer.Option("--plugin", help="Plugin Python files to load (repeatable)"),
-    ] = None,
 ) -> None:
     """Process raw footage into a publish-ready video."""
     from clearcut.models import AssetPosition, PipelineConfig
@@ -255,6 +254,18 @@ def process(
         import yaml
 
         file_defaults = yaml.safe_load(config.read_text()) or {}
+
+    def _parse_speed_segments(raw: str | list[str] | None) -> list[str]:
+        """Parse speed segments from comma-separated string or list."""
+        if raw is None:
+            return []
+        if isinstance(raw, str):
+            if not raw.strip():
+                return []
+            return [s.strip() for s in raw.split(",") if s.strip()]
+        if isinstance(raw, list):
+            return raw
+        return []
 
     def _pick(cli_val: object, key: str, cli_default: object) -> object:
         """Return CLI value if explicitly set, else fall back to config file."""
@@ -302,7 +313,7 @@ def process(
         transition_duration=_pick(transition_duration, "transition_duration", 0.3),  # type: ignore[arg-type]
         punch_zoom=_pick(punch_zoom, "punch_zoom", 0.0),  # type: ignore[arg-type]
         hook_zoom=_pick(hook_zoom, "hook_zoom", False),  # type: ignore[arg-type]
-        speed_segments=_pick(speed_segments, "speed_segments", None) or [],  # type: ignore[arg-type]
+        speed_segments=_parse_speed_segments(_pick(speed_segments, "speed_segments", None)),
         detect_scenes=_pick(detect_scenes, "detect_scenes", False),  # type: ignore[arg-type]
         max_clip_duration=_pick(max_clip_duration, "max_clip_duration", 0.0),  # type: ignore[arg-type]
         color_preset=_pick(color_preset, "color_preset", None),  # type: ignore[arg-type]
@@ -327,15 +338,7 @@ def process(
                 console.print(f"  [red]✗[/red] {e}")
         return
 
-    # Load plugins
-    from clearcut.plugins import discover_plugins
-
-    loaded_plugins = discover_plugins(plugin or [])
-    if loaded_plugins:
-        for p in loaded_plugins:
-            console.print(f"  [green]Loaded plugin:[/green] {p['name']} ({p['path']})")
-
-    pipeline = Pipeline(config_obj, plugins=loaded_plugins)
+    pipeline = Pipeline(config_obj)
     try:
         pipeline.run()
     finally:
@@ -609,6 +612,30 @@ def batch(
         int,
         typer.Option("--max-workers", help="Number of parallel workers"),
     ] = 2,
+    template: Annotated[
+        Optional[str],
+        typer.Option("--template", help="Template preset (clean/tiktok/cinematic/bold)"),
+    ] = None,
+    style: Annotated[
+        str,
+        typer.Option("--style", "-s", help="Caption style preset"),
+    ] = "default",
+    format: Annotated[
+        str,
+        typer.Option("--format", help="Output format: 16:9, 9:16, 1:1"),
+    ] = "16:9",
+    hardware: Annotated[
+        str,
+        typer.Option("--hardware", help="Hardware encoder (auto/nvenc/amf/qsv/software)"),
+    ] = "auto",
+    silence_method: Annotated[
+        str,
+        typer.Option("--silence-method", help="vad or auto-editor"),
+    ] = "vad",
+    preset: Annotated[
+        str,
+        typer.Option("--preset", help="Encoder preset (ultrafast/fast/medium/slow)"),
+    ] = "fast",
 ) -> None:
     """Batch process all videos in a directory."""
     from clearcut.batch import run_batch
@@ -620,6 +647,12 @@ def batch(
         pattern=pattern,
         dry_run=dry_run,
         max_workers=max_workers,
+        template=template,
+        style=style,
+        format=format,
+        hardware=hardware,
+        silence_method=silence_method,
+        encoder_preset=preset,
     )
     run_batch(config)
 

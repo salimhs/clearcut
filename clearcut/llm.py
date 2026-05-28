@@ -98,7 +98,8 @@ class ClaudeCliProvider(LlmProvider):
         )
 
         result = subprocess.run(
-            [self.claude_bin, "-p", prompt, "--print", "--model", self.model],
+            [self.claude_bin, "--print", "--model", self.model],
+            input=prompt,
             capture_output=True,
             text=True,
             timeout=120,

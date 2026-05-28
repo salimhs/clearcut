@@ -165,6 +165,12 @@ class BatchConfig(BaseModel):
     pattern: str = "*.mp4"
     dry_run: bool = False
     max_workers: int = 2
+    template: str | None = None
+    style: str = "default"
+    format: str = "16:9"
+    hardware: str = "auto"
+    silence_method: str = "vad"
+    encoder_preset: str = "fast"
 
     @field_validator("input_dir")
     @classmethod

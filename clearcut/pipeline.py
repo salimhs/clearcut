@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import signal
 import shutil
 import tempfile
@@ -38,7 +39,6 @@ class Pipeline:
         self.config = config
         self._tmpdir: tempfile.TemporaryDirectory | None = None
         self._workdir: Path | None = None
-        self._skip_encode: bool = False
         self._intermediate_segments: list[Path] = []
         self._interrupted: bool = False
         self._original_sigint: signal.Handlers | None = None
@@ -95,6 +95,55 @@ class Pipeline:
         if self.config.detect_scenes and not self._check_interrupted():
             current = self._stage_scene_detect(current)
 
+        # Stage 1c: Intro injection (after silence removal + scene detection, before processing)
+        if self.config.intro_path and not self.config.outro_only and not self._check_interrupted():
+            current = self._stage_intro(current)
+
+        # Stages 2-7b: If scene detection produced multiple segments, process each individually
+        if len(self._intermediate_segments) > 1:
+            processed_segments: list[Path] = []
+            for idx, seg in enumerate(self._intermediate_segments):
+                if self._check_interrupted():
+                    break
+                console.print(
+                    f"\n[bold cyan]Processing segment {idx + 1}/{len(self._intermediate_segments)}[/bold cyan]"
+                )
+                processed = self._apply_middle_stages(seg, suffix=f"_seg{idx}")
+                processed_segments.append(processed)
+            self._intermediate_segments = processed_segments
+            current = processed_segments[0] if processed_segments else current
+        else:
+            current = self._apply_middle_stages(current)
+
+        # Stage 8: Transitions between segments
+        if len(self._intermediate_segments) > 1 and not self._check_interrupted():
+            current = self._stage_transitions(current)
+
+        # Stage 9: Final encode
+        if not self._check_interrupted():
+            current = self._stage_encode(current)
+
+        # Stage 9b: Outro append (after final encode, before move)
+        if self.config.outro_path and not self.config.intro_only and not self._check_interrupted():
+            current = self._stage_outro(current)
+
+        # Move to final output
+        final = self.config.output
+        if current.suffix == ".mkv" and final.suffix == ".mp4":
+            final = final.with_suffix(".mkv")
+        if current != final:
+            shutil.copy2(str(current), str(final))
+            os.unlink(str(current))
+
+        if self._interrupted:
+            console.rule("[bold yellow]Interrupted[/bold yellow]")
+        else:
+            console.rule("[bold green]Done[/bold green]")
+        console.print(f"Output: [bold]{self.config.output}[/bold]")
+        return self.config.output
+
+    def _apply_middle_stages(self, current: Path, suffix: str = "") -> Path:
+        """Apply stages 2 through 7b to a single segment."""
         # Stage 2: Audio normalization
         if self.config.normalize_audio and not self._check_interrupted():
             current = self._stage_normalize_audio(current)
@@ -134,27 +183,7 @@ class Pipeline:
         if self.config.speed_segments and not self._check_interrupted():
             current = self._stage_speed_ramp(current)
 
-        # Stage 8: Transitions between segments
-        if len(self._intermediate_segments) > 1 and not self._check_interrupted():
-            current = self._stage_transitions(current)
-
-        # Stage 9: Final encode
-        if not self._skip_encode and not self._check_interrupted():
-            current = self._stage_encode(current)
-
-        # Move to final output
-        final = self.config.output
-        if current.suffix == ".mkv" and final.suffix == ".mp4":
-            final = final.with_suffix(".mkv")
-        if current != final:
-            shutil.move(str(current), str(final))
-
-        if self._interrupted:
-            console.rule("[bold yellow]Interrupted[/bold yellow]")
-        else:
-            console.rule("[bold green]Done[/bold green]")
-        console.print(f"Output: [bold]{self.config.output}[/bold]")
-        return self.config.output
+        return current
 
     def _stage_silence(self, input_path: Path) -> Path:
         from clearcut.silence import remove_silence
@@ -200,6 +229,36 @@ class Pipeline:
 
         # Return first segment as current; transitions stage will combine them
         return segments[0] if segments else input_path
+
+    def _stage_intro(self, input_path: Path) -> Path:
+        """Prepend intro clip to the video."""
+        from clearcut.intro import inject_intro
+
+        console.print("\n[bold]Stage 1c:[/bold] Intro injection")
+        output = self.workdir / "01c_intro.mp4"
+        inject_intro(
+            main_path=input_path,
+            intro_path=self.config.intro_path,
+            output_path=output,
+            transition=self.config.transition,
+            transition_duration=self.config.transition_duration,
+        )
+        return output
+
+    def _stage_outro(self, input_path: Path) -> Path:
+        """Append outro clip to the video."""
+        from clearcut.intro import append_outro
+
+        console.print("\n[bold]Stage 9b:[/bold] Outro append")
+        output = self.workdir / "09b_outro.mp4"
+        append_outro(
+            main_path=input_path,
+            outro_path=self.config.outro_path,
+            output_path=output,
+            transition=self.config.transition,
+            transition_duration=self.config.transition_duration,
+        )
+        return output
 
     def _stage_normalize_audio(self, input_path: Path) -> Path:
         from clearcut.audio import normalize_audio
@@ -283,9 +342,6 @@ class Pipeline:
             )
             scene.render(output)
             progress.update(task, description="Compositing complete")
-
-        if not self.config.burn_captions:
-            self._skip_encode = True
 
         return output
 

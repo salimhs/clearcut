@@ -28,7 +28,16 @@ def _output_path_for(input_file: Path, output_dir: Path) -> Path:
     return output_dir / input_file.with_suffix(".mp4").name
 
 
-def _process_single(input_file: Path, output_file: Path) -> str:
+def _process_single(
+    input_file: Path,
+    output_file: Path,
+    template: str | None = None,
+    style: str = "default",
+    format: str = "16:9",
+    hardware: str = "auto",
+    silence_method: str = "vad",
+    encoder_preset: str = "fast",
+) -> str:
     """Process a single file through the pipeline. Returns status message."""
     from clearcut.models import PipelineConfig
     from clearcut.pipeline import Pipeline
@@ -36,6 +45,12 @@ def _process_single(input_file: Path, output_file: Path) -> str:
     config = PipelineConfig(
         main=input_file,
         output=output_file,
+        template=template,
+        style=style,
+        format=format,
+        hardware=hardware,
+        silence_method=silence_method,
+        encoder_preset=encoder_preset,
     )
     pipeline = Pipeline(config)
     try:
@@ -89,15 +104,25 @@ def run_batch(config: BatchConfig) -> list[str]:
 
     results: list[str] = []
 
+    batch_kwargs = dict(
+        template=config.template,
+        style=config.style,
+        format=config.format,
+        hardware=config.hardware,
+        silence_method=config.silence_method,
+        encoder_preset=config.encoder_preset,
+    )
+
     if config.max_workers <= 1:
         for inp, out in to_process:
-            msg = _process_single(inp, out)
+            msg = _process_single(inp, out, **batch_kwargs)
             console.print(msg)
             results.append(msg)
     else:
         with ProcessPoolExecutor(max_workers=config.max_workers) as executor:
             futures = {
-                executor.submit(_process_single, inp, out): inp.name for inp, out in to_process
+                executor.submit(_process_single, inp, out, **batch_kwargs): inp.name
+                for inp, out in to_process
             }
             for future in as_completed(futures):
                 name = futures[future]

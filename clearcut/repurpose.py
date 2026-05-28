@@ -126,7 +126,7 @@ def extract_clips(
             f"{clip.start:.3f}",
             "-i",
             str(video_path),
-            "-to",
+            "-t",
             f"{dur:.3f}",
             "-c",
             "copy",
