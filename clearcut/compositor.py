@@ -25,6 +25,7 @@ class ImageOverlay:
     position: str = "center"  # center | top-right | bottom-left | custom
     scale: float = 0.8  # fraction of frame width
     opacity: float = 1.0
+    is_watermark: bool = False
 
 
 @dataclass
@@ -122,11 +123,18 @@ class CompositeScene:
         main_w, main_h = main_clip.size
         img_w = int(main_w * overlay.scale)
 
+        duration = overlay.duration
+        start = overlay.seconds
+        if overlay.is_watermark:
+            # Watermark spans the full video duration
+            duration = main_clip.duration
+            start = 0
+
         img_clip = (
             ImageClip(str(overlay.image_path))
             .resized(width=img_w)
-            .with_start(overlay.seconds)
-            .with_duration(overlay.duration)
+            .with_start(start)
+            .with_duration(duration)
             .with_opacity(overlay.opacity)
         )
 
@@ -134,16 +142,17 @@ class CompositeScene:
         positions = {
             "center": ("center", "center"),
             "top-right": (main_w - img_w - 20, 20),
+            "top-left": (20, 20),
             "bottom-left": (20, main_h - img_clip.size[1] - 20),
             "bottom-right": (main_w - img_w - 20, main_h - img_clip.size[1] - 20),
         }
         pos = positions.get(overlay.position, ("center", "center"))
         img_clip = img_clip.with_position(pos)
 
-        # Transition
-        if overlay.transition == "fade":
+        # Transition (skip for watermarks — they should be persistent)
+        if overlay.transition == "fade" and not overlay.is_watermark:
             from moviepy.video.fx import FadeIn, FadeOut
-            fade_dur = min(0.5, overlay.duration / 4)
+            fade_dur = min(0.5, duration / 4)
             img_clip = img_clip.with_effects([
                 FadeIn(fade_dur),
                 FadeOut(fade_dur),

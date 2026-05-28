@@ -95,11 +95,12 @@ class Pipeline:
             current = self._stage_normalize_audio(current)
 
         # Stage 2b: Music ducking (optional)
-        if self.config.duck_music and not self._check_interrupted():
+        if (self.config.duck_music or self.config.background_music) and not self._check_interrupted():
             current = self._stage_duck_music(current)
 
         # Stage 3: Compositing
-        if (self.config.context or self.config.images or self.config.assets) \
+        if (self.config.context or self.config.images or self.config.assets
+                or self.config.watermark_path) \
                 and not self._check_interrupted():
             current = self._stage_composite(current)
 
@@ -143,41 +144,57 @@ class Pipeline:
 
     def _stage_silence(self, input_path: Path) -> Path:
         from clearcut.silence import remove_silence
+        from clearcut.progress import stage_progress
 
         console.print("\n[bold]Stage 1:[/bold] Silence removal")
         output = self.workdir / "01_trimmed.mp4"
-        remove_silence(
-            input_path, output,
-            method=self.config.silence_method,
-        )
+        with stage_progress("Detecting speech segments...") as progress:
+            task = progress.add_task("Detecting speech segments...", total=None)
+            remove_silence(
+                input_path, output,
+                method=self.config.silence_method,
+            )
+            progress.update(task, description="Silence removal complete")
         return output
 
     def _stage_normalize_audio(self, input_path: Path) -> Path:
         from clearcut.audio import normalize_audio
+        from clearcut.progress import stage_progress
 
         console.print("\n[bold]Stage 2:[/bold] Audio normalization")
         output = self.workdir / "02_normalized.mp4"
-        normalize_audio(
-            input_path, output,
-            target_lufs=self.config.audio_target_lufs,
-        )
+        with stage_progress("Normalizing audio...") as progress:
+            task = progress.add_task("Normalizing audio...", total=None)
+            normalize_audio(
+                input_path, output,
+                target_lufs=self.config.audio_target_lufs,
+            )
+            progress.update(task, description="Audio normalization complete")
         return output
 
     def _stage_duck_music(self, input_path: Path) -> Path:
         from clearcut.audio import add_ducking
+        from clearcut.progress import stage_progress
 
         console.print("\n[bold]Stage 2b:[/bold] Music ducking")
         output = self.workdir / "02b_ducked.mp4"
-        assert self.config.duck_music is not None
-        add_ducking(
-            input_path,
-            self.config.duck_music,
-            output,
-        )
+
+        # Use background_music if duck_music not explicitly set
+        music_path = self.config.duck_music or self.config.background_music
+        assert music_path is not None
+        with stage_progress("Ducking music...") as progress:
+            task = progress.add_task("Ducking music...", total=None)
+            add_ducking(
+                input_path,
+                music_path,
+                output,
+            )
+            progress.update(task, description="Music ducking complete")
         return output
 
     def _stage_composite(self, input_path: Path) -> Path:
         from clearcut.compositor import CompositeScene, ImageOverlay
+        from clearcut.progress import stage_progress
 
         console.print("\n[bold]Stage 3:[/bold] Compositing")
         output = self.workdir / "03_composite.mkv"
@@ -195,13 +212,26 @@ class Pipeline:
                 seconds=asset.seconds,
                 duration=5.0,
             ))
+        if self.config.watermark_path:
+            overlays.append(ImageOverlay(
+                image_path=self.config.watermark_path,
+                seconds=0,
+                duration=0,  # ignored for watermarks
+                position=self.config.watermark_position,
+                scale=self.config.watermark_scale,
+                opacity=self.config.watermark_opacity,
+                is_watermark=True,
+            ))
 
-        scene = CompositeScene(
-            main_path=input_path,
-            context_paths=list(self.config.context),
-            overlays=overlays,
-        )
-        scene.render(output)
+        with stage_progress("Compositing layers...") as progress:
+            task = progress.add_task("Compositing layers...", total=None)
+            scene = CompositeScene(
+                main_path=input_path,
+                context_paths=list(self.config.context),
+                overlays=overlays,
+            )
+            scene.render(output)
+            progress.update(task, description="Compositing complete")
 
         if not self.config.burn_captions:
             self._skip_encode = True
@@ -269,12 +299,17 @@ class Pipeline:
 
     def _stage_captions(self, input_path: Path) -> Path:
         from clearcut.captions import CaptionGenerator
+        from clearcut.progress import stage_progress
 
         console.print("\n[bold]Stage 6:[/bold] Captions")
         style = get_style(self.config.style)
         gen = CaptionGenerator(style=style)
 
-        words = gen.transcribe(input_path)
+        with stage_progress("Transcribing audio...") as progress:
+            task = progress.add_task("Transcribing audio...", total=None)
+            words = gen.transcribe(input_path)
+            progress.update(task, description=f"Transcribed {len(words)} words")
+
         ass_content = gen.generate_ass(words)
 
         ass_path = self.workdir / "captions.ass"
@@ -333,14 +368,18 @@ class Pipeline:
 
     def _stage_encode(self, input_path: Path) -> Path:
         from clearcut.encoder import encode
+        from clearcut.progress import stage_progress
 
         console.print(f"\n[bold]Stage 9:[/bold] Final encode ({self.config.encoder_preset})")
         output = self.workdir / "09_final.mp4"
-        encode(
-            input_path, output,
-            preset=self.config.encoder_preset,
-            hardware=self.config.hardware,
-        )
+        with stage_progress("Encoding...") as progress:
+            task = progress.add_task("Encoding...", total=None)
+            encode(
+                input_path, output,
+                preset=self.config.encoder_preset,
+                hardware=self.config.hardware,
+            )
+            progress.update(task, description="Encoding complete")
         return output
 
     def add_segment(self, path: Path) -> None:

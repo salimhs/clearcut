@@ -110,6 +110,14 @@ def process(
         Optional[Path],
         typer.Option("--duck-music", help="Background music file for ducking"),
     ] = None,
+    background_music: Annotated[
+        Optional[Path],
+        typer.Option("--background-music", help="Auto-ducked background music file"),
+    ] = None,
+    music_volume: Annotated[
+        float,
+        typer.Option("--music-volume", help="Background music volume (0.0-1.0)"),
+    ] = 0.3,
     # --- Colour grading ---
     lut: Annotated[
         Optional[Path],
@@ -153,6 +161,23 @@ def process(
         bool,
         typer.Option("--hook-zoom/--no-hook-zoom", help="Quick zoom on first 2 seconds"),
     ] = False,
+    # --- Watermark ---
+    watermark: Annotated[
+        Optional[Path],
+        typer.Option("--watermark", help="Path to watermark/logo image"),
+    ] = None,
+    watermark_position: Annotated[
+        str,
+        typer.Option("--watermark-position", help="Watermark position (bottom-right/bottom-left/top-right/top-left)"),
+    ] = "bottom-right",
+    watermark_scale: Annotated[
+        float,
+        typer.Option("--watermark-scale", help="Watermark scale (fraction of frame width)"),
+    ] = 0.15,
+    watermark_opacity: Annotated[
+        float,
+        typer.Option("--watermark-opacity", help="Watermark opacity (0.0-1.0)"),
+    ] = 0.7,
     # --- Template ---
     template: Annotated[
         Optional[str],
@@ -216,6 +241,12 @@ def process(
         punch_zoom=_pick(punch_zoom, "punch_zoom", 0.0),  # type: ignore[arg-type]
         hook_zoom=_pick(hook_zoom, "hook_zoom", False),  # type: ignore[arg-type]
         template=_pick(template, "template", None),  # type: ignore[arg-type]
+        watermark_path=_pick(watermark, "watermark", None),  # type: ignore[arg-type]
+        watermark_position=_pick(watermark_position, "watermark_position", "bottom-right"),  # type: ignore[arg-type]
+        watermark_scale=_pick(watermark_scale, "watermark_scale", 0.15),  # type: ignore[arg-type]
+        watermark_opacity=_pick(watermark_opacity, "watermark_opacity", 0.7),  # type: ignore[arg-type]
+        background_music=_pick(background_music, "background_music", None),  # type: ignore[arg-type]
+        music_volume=_pick(music_volume, "music_volume", 0.3),  # type: ignore[arg-type]
     )
 
     pipeline = Pipeline(config_obj)
@@ -405,6 +436,97 @@ def remote(
         template=template,
         format=format,
     )
+
+
+@app.command()
+def merge(
+    input: Annotated[
+        Optional[list[Path]],
+        typer.Option("--input", "-i", help="Input video clips to merge"),
+    ] = None,
+    from_dir: Annotated[
+        Optional[Path],
+        typer.Option("--from-dir", help="Directory containing clips to merge"),
+    ] = None,
+    pattern: Annotated[
+        str,
+        typer.Option("--pattern", help="Glob pattern when using --from-dir"),
+    ] = "*.mp4",
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output file path"),
+    ] = Path("merged.mp4"),
+    transition: Annotated[
+        str,
+        typer.Option("--transition", help="Transition type between clips"),
+    ] = "fade",
+    transition_duration: Annotated[
+        float,
+        typer.Option("--transition-duration", help="Transition duration in seconds"),
+    ] = 0.5,
+    hardware: Annotated[
+        str,
+        typer.Option("--hardware", help="Hardware encoder (auto/nvenc/amf/qsv/software)"),
+    ] = "auto",
+) -> None:
+    """Merge multiple video clips into a single video with transitions."""
+    from clearcut.merger import collect_clips_from_dir, merge_clips
+
+    clips: list[Path] = []
+
+    if input:
+        clips.extend(input)
+    if from_dir:
+        clips.extend(collect_clips_from_dir(from_dir, pattern))
+
+    if not clips:
+        console.print("[red]No input clips provided. Use --input or --from-dir[/red]")
+        raise typer.Exit(1)
+
+    merge_clips(
+        clips=clips,
+        output_path=output,
+        transition=transition,
+        transition_duration=transition_duration,
+        hardware=hardware,
+    )
+
+
+@app.command()
+def batch(
+    dir: Annotated[
+        Path,
+        typer.Option("--dir", help="Input directory containing video files"),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output directory"),
+    ],
+    pattern: Annotated[
+        str,
+        typer.Option("--pattern", help="Glob pattern to filter files"),
+    ] = "*.mp4",
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview files without processing"),
+    ] = False,
+    max_workers: Annotated[
+        int,
+        typer.Option("--max-workers", help="Number of parallel workers"),
+    ] = 2,
+) -> None:
+    """Batch process all videos in a directory."""
+    from clearcut.batch import run_batch
+    from clearcut.models import BatchConfig
+
+    config = BatchConfig(
+        input_dir=dir,
+        output_dir=output,
+        pattern=pattern,
+        dry_run=dry_run,
+        max_workers=max_workers,
+    )
+    run_batch(config)
 
 
 @app.command()

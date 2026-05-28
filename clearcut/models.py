@@ -86,6 +86,16 @@ class PipelineConfig(BaseModel):
     punch_zoom: float = 0.0  # 0 = off, 1.05 = 5% zoom, 1.15 = 15% zoom
     hook_zoom: bool = False  # quick zoom-in on first 2 seconds
 
+    # Watermark
+    watermark_path: Path | None = None
+    watermark_position: str = "bottom-right"
+    watermark_scale: float = 0.15
+    watermark_opacity: float = 0.7
+
+    # Background music
+    background_music: Path | None = None
+    music_volume: float = 0.3
+
     # Template — overrides individual flags when set
     template: str | None = None
 
@@ -127,6 +137,25 @@ class PipelineConfig(BaseModel):
             self.lut = Path(tpl.lut_path)
 
         return self
+
+
+class BatchConfig(BaseModel):
+    """Configuration for batch processing of multiple video files."""
+
+    input_dir: Path
+    output_dir: Path
+    pattern: str = "*.mp4"
+    dry_run: bool = False
+    max_workers: int = 2
+
+    @field_validator("input_dir")
+    @classmethod
+    def input_dir_must_exist(cls, v: Path) -> Path:
+        if not v.exists():
+            raise ValueError(f"Input directory not found: {v}")
+        if not v.is_dir():
+            raise ValueError(f"Input path is not a directory: {v}")
+        return v
 
 
 def _caption_style_map() -> dict[str, CaptionStyle]:
